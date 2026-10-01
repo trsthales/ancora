@@ -8,6 +8,13 @@
       "when": 1790871080877,
       "tag": "0000_flat_wild_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790874382570,
+      "tag": "0001_thin_zombie",
+      "breakpoints": true
     }
   ]
 }
