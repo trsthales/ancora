@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -15,16 +15,27 @@ import { GroundingScreen } from './GroundingScreen';
 import { CapsInfoModal } from './CapsInfoModal';
 import { useTheme, ThemeColors } from '../../contexts/ThemeContext';
 
-type SOSViewMode = 'dashboard' | 'breathing' | 'grounding' | 'caps';
+export type SOSViewMode = 'dashboard' | 'breathing' | 'grounding' | 'caps';
 
 interface SOSDashboardModalProps {
   visible: boolean;
+  initialView?: SOSViewMode;
   onClose: () => void;
 }
 
-export const SOSDashboardModal: React.FC<SOSDashboardModalProps> = ({ visible, onClose }) => {
-  const [viewMode, setViewMode] = useState<SOSViewMode>('dashboard');
+export const SOSDashboardModal: React.FC<SOSDashboardModalProps> = ({
+  visible,
+  initialView = 'dashboard',
+  onClose,
+}) => {
+  const [viewMode, setViewMode] = useState<SOSViewMode>(initialView);
   const { theme, colors } = useTheme();
+
+  useEffect(() => {
+    if (visible) {
+      setViewMode(initialView);
+    }
+  }, [visible, initialView]);
 
   const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
 

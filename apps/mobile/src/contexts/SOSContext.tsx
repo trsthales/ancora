@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState } from 'react';
-import { SOSDashboardModal } from '../screens/sos/SOSDashboardModal';
+import { SOSDashboardModal, SOSViewMode } from '../screens/sos/SOSDashboardModal';
 
 interface SOSContextData {
   isSOSOpen: boolean;
-  openSOS: () => void;
+  openSOS: (initialView?: SOSViewMode | unknown) => void;
   closeSOS: () => void;
 }
 
@@ -11,14 +11,22 @@ const SOSContext = createContext<SOSContextData>({} as SOSContextData);
 
 export const SOSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSOSOpen, setIsSOSOpen] = useState(false);
+  const [initialView, setInitialView] = useState<SOSViewMode>('dashboard');
 
-  const openSOS = () => setIsSOSOpen(true);
+  const openSOS = (view?: unknown) => {
+    const validView: SOSViewMode =
+      typeof view === 'string' && ['dashboard', 'breathing', 'grounding', 'caps'].includes(view)
+        ? (view as SOSViewMode)
+        : 'dashboard';
+    setInitialView(validView);
+    setIsSOSOpen(true);
+  };
   const closeSOS = () => setIsSOSOpen(false);
 
   return (
     <SOSContext.Provider value={{ isSOSOpen, openSOS, closeSOS }}>
       {children}
-      <SOSDashboardModal visible={isSOSOpen} onClose={closeSOS} />
+      <SOSDashboardModal visible={isSOSOpen} initialView={initialView} onClose={closeSOS} />
     </SOSContext.Provider>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -13,6 +13,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSOS } from '../contexts/SOSContext';
 import { useTheme, ThemeColors } from '../contexts/ThemeContext';
 import { SOSFloatingButton } from '../components/SOSFloatingButton';
+import { CheckinCard } from '../components/CheckinCard';
+import { ProgressCard } from '../components/ProgressCard';
+import { AlternativesModal } from '../components/AlternativesModal';
+import { journeyService, Checkin } from '../services/journey';
 
 export const HomeScreen: React.FC = () => {
   const { user, profile, logout } = useAuth();
@@ -20,7 +24,62 @@ export const HomeScreen: React.FC = () => {
   const { theme, toggleTheme, colors } = useTheme();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  // Estados da Jornada Pessoal
+  const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
+  const [todayCheckin, setTodayCheckin] = useState<Checkin | null>(null);
+  const [totalCheckins, setTotalCheckins] = useState(0);
+  const [isLoadingJourney, setIsLoadingJourney] = useState(true);
+
+  // Estado do Motor de Interceptação para fissura alta
+  const [isAlternativesOpen, setIsAlternativesOpen] = useState(false);
+  const [interceptedCravingLevel, setInterceptedCravingLevel] = useState(4);
+
   const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
+
+  // Carrega status de check-in do dia e histórico de vitórias acumuladas
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadJourneyData() {
+      setIsLoadingJourney(true);
+      try {
+        const [todayRes, historyRes] = await Promise.all([
+          journeyService.getTodayCheckin(),
+          journeyService.getJourneyHistory(30),
+        ]);
+
+        if (isMounted) {
+          setHasCheckedInToday(todayRes.hasCheckedInToday);
+          setTodayCheckin(todayRes.checkin);
+          setTotalCheckins(historyRes.totalCheckins);
+        }
+      } catch {
+        // Falhas transitórias mantêm os estados neutros padrão
+      } finally {
+        if (isMounted) {
+          setIsLoadingJourney(false);
+        }
+      }
+    }
+
+    loadJourneyData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleCheckinSuccess = (newCheckin: Checkin) => {
+    setTodayCheckin(newCheckin);
+    setHasCheckedInToday(true);
+    setTotalCheckins((prev) => (hasCheckedInToday ? prev : prev + 1));
+
+    // Motor de Interceptação: dispara modal imediatamente se fissura >= 4
+    if (newCheckin.cravingLevel >= 4) {
+      setInterceptedCravingLevel(newCheckin.cravingLevel);
+      setIsAlternativesOpen(true);
+    }
+  };
 
   const formattedPseudonym = profile?.pseudonym
     ? profile.pseudonym.startsWith('@')
@@ -103,6 +162,17 @@ export const HomeScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* Card de Progresso Cumulativo Neutro (RFC 002) */}
+        <ProgressCard totalCheckins={totalCheckins} isLoading={isLoadingJourney} />
+
+        {/* Card de Check-in Diário */}
+        <CheckinCard
+          hasCheckedInToday={hasCheckedInToday}
+          todayCheckin={todayCheckin}
+          isLoadingInitial={isLoadingJourney}
+          onCheckinSuccess={handleCheckinSuccess}
+        />
+
         {/* Card SOS Integrado */}
         <View style={styles.sosCard}>
           <View style={styles.sosCardTop}>
@@ -120,7 +190,7 @@ export const HomeScreen: React.FC = () => {
           </Text>
           <TouchableOpacity
             style={styles.sosButton}
-            onPress={openSOS}
+            onPress={() => openSOS()}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel="Acionar Protocolo SOS"
@@ -151,7 +221,14 @@ export const HomeScreen: React.FC = () => {
       </ScrollView>
 
       {/* Botão Flutuante SOS permanente */}
-      <SOSFloatingButton onPress={openSOS} />
+      <SOSFloatingButton onPress={() => openSOS()} />
+
+      {/* Motor de Interceptação: Alternativas para este Momento */}
+      <AlternativesModal
+        visible={isAlternativesOpen}
+        onClose={() => setIsAlternativesOpen(false)}
+        cravingLevel={interceptedCravingLevel}
+      />
     </SafeAreaView>
   );
 };

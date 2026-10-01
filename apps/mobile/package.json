@@ -12,18 +12,18 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.26.0",
-    "@expo/metro-runtime": "~4.0.1",
-    "expo": "~52.0.37",
-    "expo-secure-store": "~14.0.1",
-    "expo-status-bar": "~2.0.1",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "react-native": "0.76.9",
-    "react-native-web": "~0.19.13"
+    "@expo/metro-runtime": "~57.0.16",
+    "expo": "^57.0.26",
+    "expo-secure-store": "~57.0.4",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-web": "^0.21.3"
   },
   "devDependencies": {
-    "@types/react": "~18.3.12",
-    "@types/react-dom": "~18.3.1",
-    "typescript": "^5.7.3"
+    "@types/react": "~19.2.18",
+    "@types/react-dom": "~19.2.7",
+    "typescript": "~6.0.3"
   }
 }
