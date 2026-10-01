@@ -1,5 +1,8 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import { sql } from 'drizzle-orm';
+import { env } from './env.js';
+import { db } from './db/index.js';
 
 export const buildServer = async () => {
   const app = Fastify({
@@ -10,19 +13,29 @@ export const buildServer = async () => {
     origin: true,
   });
 
-  app.get('/health', async () => {
-    return {
-      status: 'ok',
-      app: 'ancora-api',
-      timestamp: new Date().toISOString(),
-    };
+  app.get('/health', async (request, reply) => {
+    try {
+      await db.execute(sql`SELECT 1`);
+      return {
+        status: 'ok',
+        app: 'ancora-api',
+        database: 'connected',
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      request.log.error(error, 'Falha no healthcheck do banco de dados');
+      return reply.status(503).send({
+        status: 'error',
+        database: 'disconnected',
+      });
+    }
   });
 
   return app;
 };
 
 const start = async () => {
-  const port = Number(process.env.PORT) || 3333;
+  const port = env.PORT;
   const host = '0.0.0.0';
 
   try {

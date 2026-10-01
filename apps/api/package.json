@@ -7,15 +7,22 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.2",
+    "dotenv": "^18.0.5",
+    "drizzle-orm": "^0.45.3",
     "fastify": "^5.2.1",
+    "postgres": "^3.4.9",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/node": "^22.13.5",
+    "drizzle-kit": "^0.31.11",
     "tsx": "^4.19.3",
     "typescript": "^5.7.3"
   }
