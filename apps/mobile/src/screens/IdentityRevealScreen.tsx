@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-} from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 
 export const IdentityRevealScreen: React.FC = () => {
@@ -18,8 +11,7 @@ export const IdentityRevealScreen: React.FC = () => {
       : `@${profile.pseudonym}`
     : '@Navegador_000';
 
-  const personaLabel =
-    profile?.persona === 'apoio' ? 'Ponto de Apoio' : 'Navegador';
+  const personaLabel = profile?.persona === 'apoio' ? 'Ponto de Apoio' : 'Navegador';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -46,7 +38,8 @@ export const IdentityRevealScreen: React.FC = () => {
             Sua identidade na comunidade está protegida pelo anonimato.
           </Text>
           <Text style={styles.privacySubtext}>
-            Seu e-mail ou dados pessoais nunca serão visíveis para outros navegadores ou pontos de apoio. Você é livre para ser você mesmo, com segurança.
+            Seu e-mail ou dados pessoais nunca serão visíveis para outros navegadores ou pontos de
+            apoio. Você é livre para ser você mesmo, com segurança.
           </Text>
         </View>
 

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, StatusBar, ActivityIndicator } from 'react-native';
 import { registerRootComponent } from 'expo';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { SOSProvider, useSOS } from './src/contexts/SOSContext';
+import { SOSFloatingButton } from './src/components/SOSFloatingButton';
 import { WelcomeScreen } from './src/screens/WelcomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { RegisterScreen } from './src/screens/RegisterScreen';
@@ -12,6 +14,7 @@ type UnauthenticatedScreen = 'welcome' | 'login' | 'register';
 
 function MainNavigator() {
   const { isLoading, isAuthenticated, justRegistered } = useAuth();
+  const { openSOS } = useSOS();
   const [currentScreen, setCurrentScreen] = useState<UnauthenticatedScreen>('welcome');
 
   if (isLoading) {
@@ -30,41 +33,54 @@ function MainNavigator() {
 
   if (isAuthenticated) {
     if (justRegistered) {
-      return <IdentityRevealScreen />;
+      return (
+        <View style={styles.appContainer}>
+          <IdentityRevealScreen />
+          <SOSFloatingButton onPress={openSOS} />
+        </View>
+      );
     }
     return <HomeScreen />;
   }
 
+  let content = null;
   if (currentScreen === 'login') {
-    return (
+    content = (
       <LoginScreen
         onNavigateToRegister={() => setCurrentScreen('register')}
         onNavigateToWelcome={() => setCurrentScreen('welcome')}
       />
     );
-  }
-
-  if (currentScreen === 'register') {
-    return (
+  } else if (currentScreen === 'register') {
+    content = (
       <RegisterScreen
         onNavigateToLogin={() => setCurrentScreen('login')}
         onNavigateToWelcome={() => setCurrentScreen('welcome')}
       />
     );
+  } else {
+    content = (
+      <WelcomeScreen
+        onNavigateToLogin={() => setCurrentScreen('login')}
+        onNavigateToRegister={() => setCurrentScreen('register')}
+      />
+    );
   }
 
   return (
-    <WelcomeScreen
-      onNavigateToLogin={() => setCurrentScreen('login')}
-      onNavigateToRegister={() => setCurrentScreen('register')}
-    />
+    <View style={styles.appContainer}>
+      {content}
+      <SOSFloatingButton onPress={openSOS} />
+    </View>
   );
 }
 
 export default function App() {
   return (
     <AuthProvider>
-      <MainNavigator />
+      <SOSProvider>
+        <MainNavigator />
+      </SOSProvider>
     </AuthProvider>
   );
 }
@@ -105,6 +121,10 @@ const styles = StyleSheet.create({
   },
   spinner: {
     marginTop: 8,
+  },
+  appContainer: {
+    flex: 1,
+    backgroundColor: '#0f172a',
   },
 });
 

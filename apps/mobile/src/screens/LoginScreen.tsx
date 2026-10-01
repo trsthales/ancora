@@ -67,9 +67,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               <Text style={styles.backButtonText}>← Voltar</Text>
             </TouchableOpacity>
             <Text style={styles.title}>Entrar no Âncora</Text>
-            <Text style={styles.subtitle}>
-              Bem-vindo de volta ao seu porto seguro.
-            </Text>
+            <Text style={styles.subtitle}>Bem-vindo de volta ao seu porto seguro.</Text>
           </View>
 
           {errorMessage && (
@@ -110,10 +108,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
             {/* Botão de Envio */}
             <TouchableOpacity
-              style={[
-                styles.submitButton,
-                !canSubmit && styles.submitButtonDisabled,
-              ]}
+              style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
               onPress={handleSubmit}
               disabled={!canSubmit}
               activeOpacity={0.8}
@@ -124,10 +119,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 <ActivityIndicator color="#f8fafc" />
               ) : (
                 <Text
-                  style={[
-                    styles.submitButtonText,
-                    !canSubmit && styles.submitButtonTextDisabled,
-                  ]}
+                  style={[styles.submitButtonText, !canSubmit && styles.submitButtonTextDisabled]}
                 >
                   Entrar
                 </Text>
