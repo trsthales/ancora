@@ -1,54 +1,110 @@
-import React from 'react';
-import { StyleSheet, Text, View, StatusBar } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, StatusBar, ActivityIndicator } from 'react-native';
 import { registerRootComponent } from 'expo';
+import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { WelcomeScreen } from './src/screens/WelcomeScreen';
+import { LoginScreen } from './src/screens/LoginScreen';
+import { RegisterScreen } from './src/screens/RegisterScreen';
+import { IdentityRevealScreen } from './src/screens/IdentityRevealScreen';
+import { HomeScreen } from './src/screens/HomeScreen';
+
+type UnauthenticatedScreen = 'welcome' | 'login' | 'register';
+
+function MainNavigator() {
+  const { isLoading, isAuthenticated, justRegistered } = useAuth();
+  const [currentScreen, setCurrentScreen] = useState<UnauthenticatedScreen>('welcome');
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+        <View style={styles.loadingCard}>
+          <Text style={styles.loadingIcon}>⚓</Text>
+          <Text style={styles.loadingTitle}>Âncora</Text>
+          <Text style={styles.loadingSlogan}>Firmeza para atravessar a tempestade.</Text>
+          <ActivityIndicator size="small" color="#0d9488" style={styles.spinner} />
+        </View>
+      </View>
+    );
+  }
+
+  if (isAuthenticated) {
+    if (justRegistered) {
+      return <IdentityRevealScreen />;
+    }
+    return <HomeScreen />;
+  }
+
+  if (currentScreen === 'login') {
+    return (
+      <LoginScreen
+        onNavigateToRegister={() => setCurrentScreen('register')}
+        onNavigateToWelcome={() => setCurrentScreen('welcome')}
+      />
+    );
+  }
+
+  if (currentScreen === 'register') {
+    return (
+      <RegisterScreen
+        onNavigateToLogin={() => setCurrentScreen('login')}
+        onNavigateToWelcome={() => setCurrentScreen('welcome')}
+      />
+    );
+  }
+
+  return (
+    <WelcomeScreen
+      onNavigateToLogin={() => setCurrentScreen('login')}
+      onNavigateToRegister={() => setCurrentScreen('register')}
+    />
+  );
+}
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#090d16" />
-      <View style={styles.card}>
-        <Text style={styles.icon}>⚓</Text>
-        <Text style={styles.title}>Âncora</Text>
-        <Text style={styles.slogan}>Firmeza para atravessar a tempestade.</Text>
-      </View>
-    </View>
+    <AuthProvider>
+      <MainNavigator />
+    </AuthProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loadingContainer: {
     flex: 1,
-    backgroundColor: '#090d16',
+    backgroundColor: '#0f172a',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
   },
-  card: {
+  loadingCard: {
     alignItems: 'center',
     padding: 32,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#1e293b',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#334155',
     maxWidth: 400,
     width: '100%',
   },
-  icon: {
+  loadingIcon: {
     fontSize: 48,
     marginBottom: 16,
   },
-  title: {
-    fontSize: 32,
+  loadingTitle: {
+    fontSize: 28,
     fontWeight: '700',
     color: '#f8fafc',
     marginBottom: 8,
-    letterSpacing: 0.5,
   },
-  slogan: {
-    fontSize: 16,
+  loadingSlogan: {
+    fontSize: 14,
     color: '#94a3b8',
     textAlign: 'center',
-    lineHeight: 24,
+    marginBottom: 16,
+  },
+  spinner: {
+    marginTop: 8,
   },
 });
 
