@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme, ThemeColors } from '../contexts/ThemeContext';
 
 export const IdentityRevealScreen: React.FC = () => {
   const { profile, acknowledgeIdentity } = useAuth();
+  const { theme, colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
 
   const formattedPseudonym = profile?.pseudonym
     ? profile.pseudonym.startsWith('@')
@@ -15,7 +18,10 @@ export const IdentityRevealScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+      <StatusBar
+        barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       <View style={styles.content}>
         <View style={styles.badgeContainer}>
           <Text style={styles.badgeText}>Identidade Gerada com Sucesso</Text>
@@ -57,126 +63,127 @@ export const IdentityRevealScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    maxWidth: 480,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  badgeContainer: {
-    backgroundColor: 'rgba(13, 148, 136, 0.15)',
-    borderWidth: 1,
-    borderColor: '#0d9488',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    marginBottom: 24,
-  },
-  badgeText: {
-    color: '#2dd4bf',
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  card: {
-    alignItems: 'center',
-    padding: 32,
-    borderRadius: 24,
-    backgroundColor: '#1e293b',
-    borderWidth: 1,
-    borderColor: '#334155',
-    width: '100%',
-    marginBottom: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  avatarCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(13, 148, 136, 0.2)',
-    borderWidth: 2,
-    borderColor: '#0d9488',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  avatarIcon: {
-    fontSize: 40,
-  },
-  pseudonym: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#f8fafc',
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  personaBadge: {
-    backgroundColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    marginBottom: 20,
-  },
-  personaBadgeText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  divider: {
-    width: '100%',
-    height: 1,
-    backgroundColor: '#334155',
-    marginBottom: 20,
-  },
-  privacyHeading: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0d9488',
-    marginBottom: 6,
-  },
-  privacyMessage: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#f8fafc',
-    textAlign: 'center',
-    marginBottom: 10,
-    lineHeight: 22,
-  },
-  privacySubtext: {
-    fontSize: 13,
-    color: '#94a3b8',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  continueButton: {
-    width: '100%',
-    backgroundColor: '#0d9488',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  continueButtonText: {
-    color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-});
+const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 24,
+      maxWidth: 480,
+      width: '100%',
+      alignSelf: 'center',
+    },
+    badgeContainer: {
+      backgroundColor: theme === 'dark' ? 'rgba(13, 148, 136, 0.15)' : 'rgba(15, 118, 110, 0.1)',
+      borderWidth: 1,
+      borderColor: colors.primary,
+      borderRadius: 20,
+      paddingVertical: 6,
+      paddingHorizontal: 16,
+      marginBottom: 24,
+    },
+    badgeText: {
+      color: theme === 'dark' ? '#2dd4bf' : colors.primary,
+      fontSize: 13,
+      fontWeight: '600',
+      letterSpacing: 0.5,
+      textTransform: 'uppercase',
+    },
+    card: {
+      alignItems: 'center',
+      padding: 32,
+      borderRadius: 24,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      width: '100%',
+      marginBottom: 32,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    avatarCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: theme === 'dark' ? 'rgba(13, 148, 136, 0.2)' : 'rgba(15, 118, 110, 0.12)',
+      borderWidth: 2,
+      borderColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 20,
+    },
+    avatarIcon: {
+      fontSize: 40,
+    },
+    pseudonym: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 8,
+      letterSpacing: 0.5,
+    },
+    personaBadge: {
+      backgroundColor: theme === 'dark' ? colors.cardBorder : '#e2e8f0',
+      borderRadius: 12,
+      paddingVertical: 4,
+      paddingHorizontal: 12,
+      marginBottom: 20,
+    },
+    personaBadgeText: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    divider: {
+      width: '100%',
+      height: 1,
+      backgroundColor: colors.cardBorder,
+      marginBottom: 20,
+    },
+    privacyHeading: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.primary,
+      marginBottom: 6,
+    },
+    privacyMessage: {
+      fontSize: 15,
+      fontWeight: '500',
+      color: colors.text,
+      textAlign: 'center',
+      marginBottom: 10,
+      lineHeight: 22,
+    },
+    privacySubtext: {
+      fontSize: 13,
+      color: colors.textMuted,
+      textAlign: 'center',
+      lineHeight: 18,
+    },
+    continueButton: {
+      width: '100%',
+      backgroundColor: colors.primary,
+      paddingVertical: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    continueButtonText: {
+      color: colors.primaryText,
+      fontSize: 16,
+      fontWeight: '600',
+      letterSpacing: 0.3,
+    },
+  });
