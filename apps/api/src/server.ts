@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
+import fastifyJwt from '@fastify/jwt';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { env } from './env.js';
@@ -51,6 +52,21 @@ export const buildServer = async () => {
 
   await app.register(cors, {
     origin: true,
+  });
+
+  await app.register(fastifyJwt, {
+    secret: env.JWT_SECRET,
+  });
+
+  app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.status(401).send({
+        status: 'error',
+        message: 'Token de autenticação inválido ou expirado.',
+      });
+    }
   });
 
   await app.register(authRoutes, {
