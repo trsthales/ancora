@@ -10,9 +10,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { useSOS } from '../contexts/SOSContext';
+import { SOSFloatingButton } from '../components/SOSFloatingButton';
 
 export const HomeScreen: React.FC = () => {
   const { user, profile, logout } = useAuth();
+  const { openSOS } = useSOS();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const formattedPseudonym = profile?.pseudonym
@@ -21,8 +24,7 @@ export const HomeScreen: React.FC = () => {
       : `@${profile.pseudonym}`
     : '@Navegador';
 
-  const personaLabel =
-    profile?.persona === 'apoio' ? 'Ponto de Apoio' : 'Navegador';
+  const personaLabel = profile?.persona === 'apoio' ? 'Ponto de Apoio' : 'Navegador';
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -80,11 +82,39 @@ export const HomeScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* Card SOS Integrado */}
+        <View style={styles.sosCard}>
+          <View style={styles.sosCardTop}>
+            <View style={styles.sosIconContainer}>
+              <Text style={styles.sosCardIcon}>🛟</Text>
+            </View>
+            <View style={styles.sosCardHeaderTexts}>
+              <Text style={styles.sosCardTitle}>Apoio Imediato • SOS</Text>
+              <Text style={styles.sosCardSub}>Semáforo de Crise 100% Offline</Text>
+            </View>
+          </View>
+          <Text style={styles.sosCardBody}>
+            Em momentos de fissura, ansiedade intensa ou urgência emocional, utilize nossos
+            exercícios guiados e contatos de socorro.
+          </Text>
+          <TouchableOpacity
+            style={styles.sosButton}
+            onPress={openSOS}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir o Semáforo SOS agora"
+          >
+            <Text style={styles.sosButtonText}>Acionar Protocolo SOS ( 🟢 🟡 🔴 )</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Informações da Trilha */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Sua Trilha no Âncora</Text>
           <Text style={styles.cardText}>
-            Como <Text style={styles.highlightText}>{personaLabel}</Text>, você faz parte de um ecossistema construído para oferecer firmeza, escuta ativa e acolhimento nos momentos mais delicados.
+            Como <Text style={styles.highlightText}>{personaLabel}</Text>, você faz parte de um
+            ecossistema construído para oferecer firmeza, escuta ativa e acolhimento nos momentos
+            mais delicados.
           </Text>
         </View>
 
@@ -92,10 +122,15 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Garantia de Anonimato</Text>
           <Text style={styles.cardText}>
-            Nenhuma informação pessoal como e-mail ({user?.email}) ou identificadores reais é compartilhada com outros participantes. Somente seu pseudônimo <Text style={styles.highlightText}>{formattedPseudonym}</Text> é visível.
+            Nenhuma informação pessoal como e-mail ({user?.email}) ou identificadores reais é
+            compartilhada com outros participantes. Somente seu pseudônimo{' '}
+            <Text style={styles.highlightText}>{formattedPseudonym}</Text> é visível.
           </Text>
         </View>
       </ScrollView>
+
+      {/* Botão Flutuante SOS permanente */}
+      <SOSFloatingButton onPress={openSOS} />
     </SafeAreaView>
   );
 };
@@ -234,5 +269,63 @@ const styles = StyleSheet.create({
   highlightText: {
     color: '#0d9488',
     fontWeight: '600',
+  },
+  sosCard: {
+    backgroundColor: '#1e293b',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1.5,
+    borderColor: '#ef4444',
+    gap: 12,
+  },
+  sosCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  sosIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sosCardIcon: {
+    fontSize: 22,
+  },
+  sosCardHeaderTexts: {
+    flex: 1,
+    gap: 2,
+  },
+  sosCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#f8fafc',
+  },
+  sosCardSub: {
+    fontSize: 12,
+    color: '#f87171',
+    fontWeight: '600',
+  },
+  sosCardBody: {
+    fontSize: 13,
+    color: '#cbd5e1',
+    lineHeight: 19,
+  },
+  sosButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderWidth: 1.5,
+    borderColor: '#ef4444',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  sosButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });

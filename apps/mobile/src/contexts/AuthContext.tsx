@@ -1,5 +1,12 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import type { User, Profile, AuthResponse, RegisterResponse, ApiSuccessResponse, Persona } from '../types/auth';
+import type {
+  User,
+  Profile,
+  AuthResponse,
+  RegisterResponse,
+  ApiSuccessResponse,
+  Persona,
+} from '../types/auth';
 import { apiFetch } from '../services/api';
 import { storage } from '../services/storage';
 
@@ -32,7 +39,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        const response = await apiFetch<ApiSuccessResponse<{ user: User; profile: Profile }>>('/auth/me');
+        const response =
+          await apiFetch<ApiSuccessResponse<{ user: User; profile: Profile }>>('/auth/me');
         if (response?.data?.user && response?.data?.profile) {
           setUser(response.data.user);
           setProfile(response.data.profile);
@@ -84,7 +92,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       body: JSON.stringify({ email, password }),
     });
 
-    const { accessToken, refreshToken, user: loggedUser, profile: loggedProfile } = loginResponse.data;
+    const {
+      accessToken,
+      refreshToken,
+      user: loggedUser,
+      profile: loggedProfile,
+    } = loginResponse.data;
     await storage.setItem('accessToken', accessToken);
     await storage.setItem('refreshToken', refreshToken);
 

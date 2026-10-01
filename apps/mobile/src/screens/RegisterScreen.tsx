@@ -144,10 +144,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[
-                    styles.personaCard,
-                    persona === 'apoio' && styles.personaCardSelected,
-                  ]}
+                  style={[styles.personaCard, persona === 'apoio' && styles.personaCardSelected]}
                   onPress={() => setPersona('apoio')}
                   activeOpacity={0.8}
                 >
@@ -185,10 +182,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 
             {/* Botão de Envio */}
             <TouchableOpacity
-              style={[
-                styles.submitButton,
-                !canSubmit && styles.submitButtonDisabled,
-              ]}
+              style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
               onPress={handleSubmit}
               disabled={!canSubmit}
               activeOpacity={0.8}
@@ -199,10 +193,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                 <ActivityIndicator color="#f8fafc" />
               ) : (
                 <Text
-                  style={[
-                    styles.submitButtonText,
-                    !canSubmit && styles.submitButtonTextDisabled,
-                  ]}
+                  style={[styles.submitButtonText, !canSubmit && styles.submitButtonTextDisabled]}
                 >
                   Criar Conta Segura
                 </Text>

@@ -79,10 +79,10 @@
 
 ### Tarefas da Sprint 3:
 
-- [ ] **TASK-301: Estrutura Offline-First do Botão SOS no Mobile**
+- [x] **TASK-301: Estrutura Offline-First do Botão SOS no Mobile**
   - Componente flutuante do SOS acessível globalmente no app.
   - Armazenamento local das rotinas de crise (sem dependência de conexão de internet).
-- [ ] **TASK-302: Telas do Semáforo SOS (🟢 🟡 🔴)**
+- [x] **TASK-302: Telas do Semáforo SOS (🟢 🟡 🔴)**
   - **🟢 Nível 1:** Tela de Respiração Guiada (animação fluida 4-7-8 com feedback tátil/haptic) e tela interativa da Ancoragem sensorial 5-4-3-2-1.
   - **🟡 Nível 2:** Exibição dos contatos pessoais do Plano Pré-Crise + Botão nativo para discar **188 (CVV)** (`Linking.openURL('tel:188')`).
   - **🔴 Nível 3:** Botão de discagem direta para **192 (SAMU)** + tela estática explicativa sobre o que é e onde encontrar um CAPS AD.
