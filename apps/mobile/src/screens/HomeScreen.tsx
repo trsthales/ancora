@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,12 +11,16 @@ import {
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useSOS } from '../contexts/SOSContext';
+import { useTheme, ThemeColors } from '../contexts/ThemeContext';
 import { SOSFloatingButton } from '../components/SOSFloatingButton';
 
 export const HomeScreen: React.FC = () => {
   const { user, profile, logout } = useAuth();
   const { openSOS } = useSOS();
+  const { theme, toggleTheme, colors } = useTheme();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
 
   const formattedPseudonym = profile?.pseudonym
     ? profile.pseudonym.startsWith('@')
@@ -37,7 +41,10 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+      <StatusBar
+        barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.card}
+      />
 
       {/* Cabeçalho Autenticado */}
       <View style={styles.header}>
@@ -53,20 +60,34 @@ export const HomeScreen: React.FC = () => {
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          disabled={isLoggingOut}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Sair / Logout"
-        >
-          {isLoggingOut ? (
-            <ActivityIndicator size="small" color="#94a3b8" />
-          ) : (
-            <Text style={styles.logoutButtonText}>Sair</Text>
-          )}
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.themeToggleButton}
+            onPress={toggleTheme}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={
+              theme === 'dark' ? 'Alternar para tema claro' : 'Alternar para tema escuro'
+            }
+          >
+            <Text style={styles.themeToggleIcon}>{theme === 'dark' ? '☀️' : '🌙'}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            disabled={isLoggingOut}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Sair / Logout"
+          >
+            {isLoggingOut ? (
+              <ActivityIndicator size="small" color={colors.textMuted} />
+            ) : (
+              <Text style={styles.logoutButtonText}>Sair</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -102,7 +123,7 @@ export const HomeScreen: React.FC = () => {
             onPress={openSOS}
             activeOpacity={0.85}
             accessibilityRole="button"
-            accessibilityLabel="Abrir o Semáforo SOS agora"
+            accessibilityLabel="Acionar Protocolo SOS"
           >
             <Text style={styles.sosButtonText}>Acionar Protocolo SOS ( 🟢 🟡 🔴 )</Text>
           </TouchableOpacity>
@@ -135,197 +156,216 @@ export const HomeScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#1e293b',
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-  },
-  userProfileGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(13, 148, 136, 0.2)',
-    borderWidth: 1.5,
-    borderColor: '#0d9488',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 22,
-  },
-  userInfo: {
-    gap: 2,
-  },
-  pseudonym: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#f8fafc',
-  },
-  badge: {
-    backgroundColor: '#334155',
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  badgeText: {
-    color: '#0d9488',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  logoutButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#475569',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-  },
-  logoutButtonText: {
-    color: '#94a3b8',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  content: {
-    padding: 20,
-    gap: 16,
-    maxWidth: 640,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  welcomeCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: '#334155',
-    gap: 8,
-  },
-  cardHeading: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#f8fafc',
-  },
-  cardSubheading: {
-    fontSize: 14,
-    color: '#94a3b8',
-    lineHeight: 20,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 8,
-    backgroundColor: 'rgba(13, 148, 136, 0.1)',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#10b981',
-  },
-  statusText: {
-    color: '#2dd4bf',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  card: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#334155',
-    gap: 8,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#f8fafc',
-  },
-  cardText: {
-    fontSize: 14,
-    color: '#94a3b8',
-    lineHeight: 22,
-  },
-  highlightText: {
-    color: '#0d9488',
-    fontWeight: '600',
-  },
-  sosCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1.5,
-    borderColor: '#ef4444',
-    gap: 12,
-  },
-  sosCardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  sosIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sosCardIcon: {
-    fontSize: 22,
-  },
-  sosCardHeaderTexts: {
-    flex: 1,
-    gap: 2,
-  },
-  sosCardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#f8fafc',
-  },
-  sosCardSub: {
-    fontSize: 12,
-    color: '#f87171',
-    fontWeight: '600',
-  },
-  sosCardBody: {
-    fontSize: 13,
-    color: '#cbd5e1',
-    lineHeight: 19,
-  },
-  sosButton: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderWidth: 1.5,
-    borderColor: '#ef4444',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  sosButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-});
+const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      backgroundColor: colors.card,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.cardBorder,
+    },
+    userProfileGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    avatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: theme === 'dark' ? 'rgba(13, 148, 136, 0.2)' : 'rgba(15, 118, 110, 0.12)',
+      borderWidth: 1.5,
+      borderColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarText: {
+      fontSize: 22,
+    },
+    userInfo: {
+      gap: 2,
+    },
+    pseudonym: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    badge: {
+      backgroundColor: theme === 'dark' ? colors.cardBorder : '#e2e8f0',
+      paddingVertical: 2,
+      paddingHorizontal: 8,
+      borderRadius: 6,
+      alignSelf: 'flex-start',
+    },
+    badgeText: {
+      color: colors.primary,
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    themeToggleButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    themeToggleIcon: {
+      fontSize: 16,
+    },
+    logoutButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+    },
+    logoutButtonText: {
+      color: colors.textMuted,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    content: {
+      padding: 20,
+      gap: 16,
+      maxWidth: 640,
+      width: '100%',
+      alignSelf: 'center',
+    },
+    welcomeCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 24,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      gap: 8,
+    },
+    cardHeading: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    cardSubheading: {
+      fontSize: 14,
+      color: colors.textMuted,
+      lineHeight: 20,
+    },
+    statusRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 8,
+      backgroundColor: theme === 'dark' ? 'rgba(13, 148, 136, 0.1)' : 'rgba(15, 118, 110, 0.08)',
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      alignSelf: 'flex-start',
+    },
+    statusDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: '#10b981',
+    },
+    statusText: {
+      color: theme === 'dark' ? '#2dd4bf' : colors.primary,
+      fontSize: 12,
+      fontWeight: '500',
+    },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      gap: 8,
+    },
+    cardTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    cardText: {
+      fontSize: 14,
+      color: colors.textMuted,
+      lineHeight: 22,
+    },
+    highlightText: {
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    sosCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1.5,
+      borderColor: '#ef4444',
+      gap: 12,
+    },
+    sosCardTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    sosIconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(239, 68, 68, 0.15)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sosCardIcon: {
+      fontSize: 22,
+    },
+    sosCardHeaderTexts: {
+      flex: 1,
+      gap: 2,
+    },
+    sosCardTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    sosCardSub: {
+      fontSize: 12,
+      color: '#f87171',
+      fontWeight: '600',
+    },
+    sosCardBody: {
+      fontSize: 13,
+      color: colors.textMuted,
+      lineHeight: 19,
+    },
+    sosButton: {
+      backgroundColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
+      borderWidth: 1.5,
+      borderColor: '#ef4444',
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 10,
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    sosButtonText: {
+      color: theme === 'dark' ? '#ffffff' : '#dc2626',
+      fontSize: 14,
+      fontWeight: 'bold',
+    },
+  });

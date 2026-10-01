@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import { useTheme, ThemeColors } from '../../contexts/ThemeContext';
 
 interface GroundingStep {
   step: number;
@@ -85,6 +86,9 @@ interface GroundingScreenProps {
 }
 
 export const GroundingScreen: React.FC<GroundingScreenProps> = ({ onBack }) => {
+  const { theme, colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
+
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [checkedItems, setCheckedItems] = useState<Record<number, boolean[]>>({
     0: [false, false, false, false, false],
@@ -301,303 +305,311 @@ export const GroundingScreen: React.FC<GroundingScreenProps> = ({ onBack }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-    backgroundColor: '#1e293b',
-  },
-  backButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  backButtonText: {
-    color: '#94a3b8',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  badgeNivel1: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-  },
-  badgeNivel1Text: {
-    color: '#34d399',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  content: {
-    padding: 20,
-    gap: 20,
-    maxWidth: 600,
-    width: '100%',
-    alignSelf: 'center',
-    paddingBottom: 40,
-  },
-  titleSection: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#f8fafc',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#94a3b8',
-    textAlign: 'center',
-    lineHeight: 20,
-    maxWidth: 420,
-  },
-  progressContainer: {
-    width: '100%',
-    marginTop: 12,
-    gap: 8,
-  },
-  progressBarWrapper: {
-    flexDirection: 'row',
-    gap: 6,
-    width: '100%',
-  },
-  progressBarSegment: {
-    flex: 1,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#334155',
-  },
-  progressBarSegmentActive: {
-    backgroundColor: '#10b981',
-  },
-  progressStepLabel: {
-    color: '#2dd4bf',
-    fontSize: 12,
-    fontWeight: '700',
-    textAlign: 'center',
-    letterSpacing: 0.5,
-  },
-  stepCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#334155',
-    gap: 16,
-  },
-  stepCardHeader: {
-    flexDirection: 'row',
-    gap: 14,
-    alignItems: 'flex-start',
-  },
-  stepIcon: {
-    fontSize: 32,
-  },
-  stepTitleContainer: {
-    flex: 1,
-    gap: 4,
-  },
-  stepTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#f8fafc',
-  },
-  stepInstruction: {
-    fontSize: 14,
-    color: '#cbd5e1',
-    lineHeight: 20,
-  },
-  tipBox: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.2)',
-  },
-  tipIcon: {
-    fontSize: 16,
-  },
-  tipText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#a7f3d0',
-    lineHeight: 18,
-  },
-  checklist: {
-    gap: 10,
-  },
-  checklistPrompt: {
-    fontSize: 12,
-    color: '#94a3b8',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  checklistItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-  },
-  checklistItemActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    borderColor: '#10b981',
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: '#64748b',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxActive: {
-    backgroundColor: '#10b981',
-    borderColor: '#10b981',
-  },
-  checkboxTick: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  checklistText: {
-    fontSize: 14,
-    color: '#cbd5e1',
-    fontWeight: '500',
-  },
-  checklistTextActive: {
-    color: '#f8fafc',
-    fontWeight: '600',
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  prevButton: {
-    backgroundColor: '#334155',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  prevButtonText: {
-    color: '#94a3b8',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  nextButton: {
-    flex: 1,
-    backgroundColor: '#10b981',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  successContainer: {
-    alignItems: 'center',
-    gap: 16,
-    paddingVertical: 20,
-  },
-  successIconWrapper: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(13, 148, 136, 0.2)',
-    borderWidth: 2,
-    borderColor: '#0d9488',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  successIcon: {
-    fontSize: 36,
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#f8fafc',
-    textAlign: 'center',
-  },
-  successSubheading: {
-    fontSize: 14,
-    color: '#94a3b8',
-    textAlign: 'center',
-    lineHeight: 22,
-    maxWidth: 420,
-  },
-  reassuranceCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 14,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginVertical: 8,
-    width: '100%',
-  },
-  reassuranceText: {
-    fontSize: 13,
-    color: '#cbd5e1',
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-  successButtonsGroup: {
-    width: '100%',
-    gap: 10,
-    marginTop: 8,
-  },
-  primarySuccessButton: {
-    backgroundColor: '#0d9488',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    width: '100%',
-  },
-  primarySuccessButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  secondarySuccessButton: {
-    backgroundColor: '#334155',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    width: '100%',
-  },
-  secondarySuccessButtonText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});
+const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.cardBorder,
+      backgroundColor: colors.card,
+    },
+    backButton: {
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    backButtonText: {
+      color: colors.textMuted,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    badgeNivel1: {
+      backgroundColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.12)',
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: 'rgba(16, 185, 129, 0.3)',
+    },
+    badgeNivel1Text: {
+      color: theme === 'dark' ? '#34d399' : '#059669',
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    content: {
+      padding: 20,
+      gap: 20,
+      maxWidth: 600,
+      width: '100%',
+      alignSelf: 'center',
+      paddingBottom: 40,
+    },
+    titleSection: {
+      alignItems: 'center',
+      gap: 8,
+    },
+    title: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: colors.text,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontSize: 13,
+      color: colors.textMuted,
+      textAlign: 'center',
+      lineHeight: 20,
+      maxWidth: 420,
+    },
+    progressContainer: {
+      width: '100%',
+      marginTop: 12,
+      gap: 8,
+    },
+    progressBarWrapper: {
+      flexDirection: 'row',
+      gap: 6,
+      width: '100%',
+    },
+    progressBarSegment: {
+      flex: 1,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.cardBorder,
+    },
+    progressBarSegmentActive: {
+      backgroundColor: '#10b981',
+    },
+    progressStepLabel: {
+      color: theme === 'dark' ? '#2dd4bf' : '#0d9488',
+      fontSize: 12,
+      fontWeight: '700',
+      textAlign: 'center',
+      letterSpacing: 0.5,
+    },
+    stepCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      gap: 16,
+    },
+    stepCardHeader: {
+      flexDirection: 'row',
+      gap: 14,
+      alignItems: 'flex-start',
+    },
+    stepIcon: {
+      fontSize: 32,
+    },
+    stepTitleContainer: {
+      flex: 1,
+      gap: 4,
+    },
+    stepTitle: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    stepInstruction: {
+      fontSize: 14,
+      color: colors.textMuted,
+      lineHeight: 20,
+    },
+    tipBox: {
+      flexDirection: 'row',
+      gap: 8,
+      alignItems: 'center',
+      backgroundColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(16, 185, 129, 0.1)',
+      padding: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.3)',
+    },
+    tipIcon: {
+      fontSize: 16,
+    },
+    tipText: {
+      flex: 1,
+      fontSize: 13,
+      color: theme === 'dark' ? '#a7f3d0' : '#065f46',
+      lineHeight: 18,
+    },
+    checklist: {
+      gap: 10,
+    },
+    checklistPrompt: {
+      fontSize: 12,
+      color: colors.textMuted,
+      fontWeight: '600',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    checklistItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+    },
+    checklistItemActive: {
+      backgroundColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.1)',
+      borderColor: '#10b981',
+    },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      borderWidth: 1.5,
+      borderColor: colors.cardBorder,
+      backgroundColor: colors.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxActive: {
+      backgroundColor: '#10b981',
+      borderColor: '#10b981',
+    },
+    checkboxTick: {
+      color: '#ffffff',
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    checklistText: {
+      fontSize: 14,
+      color: colors.textMuted,
+      fontWeight: '500',
+    },
+    checklistTextActive: {
+      color: colors.text,
+      fontWeight: '600',
+    },
+    actionsRow: {
+      flexDirection: 'row',
+      gap: 12,
+      width: '100%',
+    },
+    prevButton: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      paddingVertical: 14,
+      paddingHorizontal: 20,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    prevButtonText: {
+      color: colors.textMuted,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    nextButton: {
+      flex: 1,
+      backgroundColor: '#10b981',
+      paddingVertical: 14,
+      paddingHorizontal: 20,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    nextButtonText: {
+      color: '#ffffff',
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    successContainer: {
+      alignItems: 'center',
+      gap: 16,
+      paddingVertical: 20,
+    },
+    successIconWrapper: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: theme === 'dark' ? 'rgba(13, 148, 136, 0.2)' : 'rgba(15, 118, 110, 0.12)',
+      borderWidth: 2,
+      borderColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 8,
+    },
+    successIcon: {
+      fontSize: 36,
+    },
+    successTitle: {
+      fontSize: 24,
+      fontWeight: '800',
+      color: colors.text,
+      textAlign: 'center',
+    },
+    successSubheading: {
+      fontSize: 14,
+      color: colors.textMuted,
+      textAlign: 'center',
+      lineHeight: 22,
+      maxWidth: 420,
+    },
+    reassuranceCard: {
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      marginVertical: 8,
+      width: '100%',
+    },
+    reassuranceText: {
+      fontSize: 13,
+      color: colors.textMuted,
+      lineHeight: 20,
+      textAlign: 'center',
+    },
+    successButtonsGroup: {
+      width: '100%',
+      gap: 10,
+      marginTop: 8,
+    },
+    primarySuccessButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: 'center',
+      width: '100%',
+    },
+    primarySuccessButtonText: {
+      color: colors.primaryText,
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    secondarySuccessButton: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: 'center',
+      width: '100%',
+    },
+    secondarySuccessButtonText: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+  });

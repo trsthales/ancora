@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -13,6 +13,7 @@ import {
 import { BreathingScreen } from './BreathingScreen';
 import { GroundingScreen } from './GroundingScreen';
 import { CapsInfoModal } from './CapsInfoModal';
+import { useTheme, ThemeColors } from '../../contexts/ThemeContext';
 
 type SOSViewMode = 'dashboard' | 'breathing' | 'grounding' | 'caps';
 
@@ -23,6 +24,9 @@ interface SOSDashboardModalProps {
 
 export const SOSDashboardModal: React.FC<SOSDashboardModalProps> = ({ visible, onClose }) => {
   const [viewMode, setViewMode] = useState<SOSViewMode>('dashboard');
+  const { theme, colors } = useTheme();
+
+  const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
 
   const handleClose = () => {
     setViewMode('dashboard');
@@ -40,7 +44,10 @@ export const SOSDashboardModal: React.FC<SOSDashboardModalProps> = ({ visible, o
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={handleClose}>
-      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+      <StatusBar
+        barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.card}
+      />
 
       {viewMode === 'breathing' && <BreathingScreen onBack={() => setViewMode('dashboard')} />}
 
@@ -237,254 +244,257 @@ export const SOSDashboardModal: React.FC<SOSDashboardModalProps> = ({ visible, o
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-    backgroundColor: '#1e293b',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  pulseDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#ef4444',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#f8fafc',
-  },
-  closeButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  closeButtonText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  content: {
-    padding: 18,
-    gap: 16,
-    maxWidth: 640,
-    width: '100%',
-    alignSelf: 'center',
-    paddingBottom: 40,
-  },
-  welcomeBanner: {
-    backgroundColor: 'rgba(30, 41, 59, 0.7)',
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#334155',
-    gap: 4,
-  },
-  welcomeTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#f8fafc',
-  },
-  welcomeSubtitle: {
-    fontSize: 13,
-    color: '#94a3b8',
-    lineHeight: 19,
-  },
-  levelCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1.5,
-    gap: 12,
-  },
-  level1Border: {
-    borderColor: 'rgba(16, 185, 129, 0.4)',
-  },
-  level2Border: {
-    borderColor: 'rgba(245, 158, 11, 0.4)',
-  },
-  level3Border: {
-    borderColor: 'rgba(239, 68, 68, 0.4)',
-  },
-  levelHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  levelBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-  },
-  level1Badge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-  },
-  level2Badge: {
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-  },
-  level3Badge: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
-  },
-  levelBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#f8fafc',
-    letterSpacing: 0.5,
-  },
-  levelSubtitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#94a3b8',
-    letterSpacing: 0.5,
-  },
-  levelName: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#f8fafc',
-  },
-  levelDesc: {
-    fontSize: 13,
-    color: '#94a3b8',
-    lineHeight: 18,
-  },
-  actionsContainer: {
-    gap: 10,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 12,
-    gap: 12,
-  },
-  level1Button: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.25)',
-  },
-  level2Button: {
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.4)',
-  },
-  level3Button: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.4)',
-  },
-  actionIcon: {
-    fontSize: 24,
-  },
-  actionTextGroup: {
-    flex: 1,
-    gap: 2,
-  },
-  actionTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#f8fafc',
-  },
-  actionDescription: {
-    fontSize: 12,
-    color: '#94a3b8',
-  },
-  actionTitleHighlight: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  actionDescriptionHighlight: {
-    fontSize: 12,
-    color: '#cbd5e1',
-    lineHeight: 16,
-  },
-  arrowIcon: {
-    fontSize: 18,
-    color: '#64748b',
-    fontWeight: '600',
-  },
-  phoneBadge: {
-    backgroundColor: '#f59e0b',
-    color: '#0f172a',
-    fontSize: 11,
-    fontWeight: '800',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  phoneBadgeRed: {
-    backgroundColor: '#ef4444',
-    color: '#ffffff',
-  },
-  level2Disclaimer: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.08)',
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.2)',
-  },
-  disclaimerIcon: {
-    fontSize: 16,
-  },
-  disclaimerText: {
-    flex: 1,
-    fontSize: 12,
-    color: '#fde68a',
-    lineHeight: 16,
-  },
-  disclaimerBold: {
-    fontWeight: '700',
-  },
-  capsCardButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.2)',
-    padding: 14,
-    borderRadius: 12,
-  },
-  capsIcon: {
-    fontSize: 22,
-  },
-  capsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#bae6fd',
-  },
-  capsSubtitle: {
-    fontSize: 12,
-    color: '#94a3b8',
-    lineHeight: 16,
-  },
-  footerNote: {
-    padding: 12,
-    alignItems: 'center',
-  },
-  footerNoteText: {
-    fontSize: 12,
-    color: '#64748b',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-});
+const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.cardBorder,
+      backgroundColor: colors.card,
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    pulseDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: '#ef4444',
+    },
+    headerTitle: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    closeButton: {
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    closeButtonText: {
+      color: colors.textMuted,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    content: {
+      padding: 18,
+      gap: 16,
+      maxWidth: 640,
+      width: '100%',
+      alignSelf: 'center',
+      paddingBottom: 40,
+    },
+    welcomeBanner: {
+      backgroundColor: theme === 'dark' ? 'rgba(30, 41, 59, 0.7)' : 'rgba(241, 245, 249, 0.9)',
+      borderRadius: 14,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      gap: 4,
+    },
+    welcomeTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    welcomeSubtitle: {
+      fontSize: 13,
+      color: colors.textMuted,
+      lineHeight: 19,
+    },
+    levelCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 18,
+      borderWidth: 1.5,
+      gap: 12,
+    },
+    level1Border: {
+      borderColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.4)' : 'rgba(16, 185, 129, 0.5)',
+    },
+    level2Border: {
+      borderColor: theme === 'dark' ? 'rgba(245, 158, 11, 0.4)' : 'rgba(245, 158, 11, 0.5)',
+    },
+    level3Border: {
+      borderColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(239, 68, 68, 0.5)',
+    },
+    levelHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    levelBadge: {
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+    },
+    level1Badge: {
+      backgroundColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.15)',
+    },
+    level2Badge: {
+      backgroundColor: theme === 'dark' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.15)',
+    },
+    level3Badge: {
+      backgroundColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.15)',
+    },
+    levelBadgeText: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: theme === 'dark' ? '#f8fafc' : '#0f172a',
+      letterSpacing: 0.5,
+    },
+    levelSubtitle: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.textMuted,
+      letterSpacing: 0.5,
+    },
+    levelName: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    levelDesc: {
+      fontSize: 13,
+      color: colors.textMuted,
+      lineHeight: 18,
+    },
+    actionsContainer: {
+      gap: 10,
+    },
+    actionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 14,
+      borderRadius: 12,
+      gap: 12,
+    },
+    level1Button: {
+      backgroundColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.08)',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(16, 185, 129, 0.35)',
+    },
+    level2Button: {
+      backgroundColor: theme === 'dark' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.1)',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(245, 158, 11, 0.4)' : 'rgba(245, 158, 11, 0.5)',
+    },
+    level3Button: {
+      backgroundColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(239, 68, 68, 0.5)',
+    },
+    actionIcon: {
+      fontSize: 24,
+    },
+    actionTextGroup: {
+      flex: 1,
+      gap: 2,
+    },
+    actionTitle: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    actionDescription: {
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    actionTitleHighlight: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme === 'dark' ? '#ffffff' : '#0f172a',
+    },
+    actionDescriptionHighlight: {
+      fontSize: 12,
+      color: theme === 'dark' ? '#cbd5e1' : '#475569',
+      lineHeight: 16,
+    },
+    arrowIcon: {
+      fontSize: 18,
+      color: colors.textMuted,
+      fontWeight: '600',
+    },
+    phoneBadge: {
+      backgroundColor: '#f59e0b',
+      color: '#0f172a',
+      fontSize: 11,
+      fontWeight: '800',
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      overflow: 'hidden',
+    },
+    phoneBadgeRed: {
+      backgroundColor: '#ef4444',
+      color: '#ffffff',
+    },
+    level2Disclaimer: {
+      flexDirection: 'row',
+      gap: 8,
+      alignItems: 'center',
+      backgroundColor: theme === 'dark' ? 'rgba(245, 158, 11, 0.08)' : 'rgba(245, 158, 11, 0.12)',
+      padding: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.3)',
+    },
+    disclaimerIcon: {
+      fontSize: 16,
+    },
+    disclaimerText: {
+      flex: 1,
+      fontSize: 12,
+      color: theme === 'dark' ? '#fde68a' : '#78350f',
+      lineHeight: 16,
+    },
+    disclaimerBold: {
+      fontWeight: '700',
+    },
+    capsCardButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: theme === 'dark' ? 'rgba(56, 189, 248, 0.08)' : 'rgba(2, 132, 199, 0.08)',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(56, 189, 248, 0.2)' : 'rgba(2, 132, 199, 0.3)',
+      padding: 14,
+      borderRadius: 12,
+    },
+    capsIcon: {
+      fontSize: 22,
+    },
+    capsTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme === 'dark' ? '#bae6fd' : '#0369a1',
+    },
+    capsSubtitle: {
+      fontSize: 12,
+      color: colors.textMuted,
+      lineHeight: 16,
+    },
+    footerNote: {
+      padding: 12,
+      alignItems: 'center',
+    },
+    footerNoteText: {
+      fontSize: 12,
+      color: colors.textMuted,
+      textAlign: 'center',
+      lineHeight: 18,
+    },
+  });

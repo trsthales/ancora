@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
 import { BreathingCircle } from '../../components/BreathingCircle';
+import { useTheme, ThemeColors } from '../../contexts/ThemeContext';
 
 interface BreathingScreenProps {
   onBack: () => void;
 }
 
 export const BreathingScreen: React.FC<BreathingScreenProps> = ({ onBack }) => {
+  const { theme, colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -76,120 +80,123 @@ export const BreathingScreen: React.FC<BreathingScreenProps> = ({ onBack }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-    backgroundColor: '#1e293b',
-  },
-  backButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  backButtonText: {
-    color: '#94a3b8',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  badgeNivel1: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-  },
-  badgeNivel1Text: {
-    color: '#34d399',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  content: {
-    padding: 20,
-    gap: 20,
-    maxWidth: 600,
-    width: '100%',
-    alignSelf: 'center',
-    alignItems: 'center',
-    paddingBottom: 40,
-  },
-  titleSection: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#f8fafc',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#94a3b8',
-    textAlign: 'center',
-    lineHeight: 20,
-    maxWidth: 420,
-  },
-  stepsCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#334155',
-    gap: 12,
-    width: '100%',
-  },
-  stepsCardTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#e2e8f0',
-    marginBottom: 2,
-  },
-  stepItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  stepBullet: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  stepText: {
-    fontSize: 13,
-    color: '#94a3b8',
-    flex: 1,
-    lineHeight: 18,
-  },
-  stepHighlight: {
-    color: '#f1f5f9',
-    fontWeight: '600',
-  },
-  calmExitButton: {
-    backgroundColor: '#1e293b',
-    borderWidth: 1.5,
-    borderColor: '#10b981',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 24,
-    width: '100%',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  calmExitButtonText: {
-    color: '#34d399',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-});
+const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.cardBorder,
+      backgroundColor: colors.card,
+    },
+    backButton: {
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    backButtonText: {
+      color: colors.textMuted,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    badgeNivel1: {
+      backgroundColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.12)',
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: 'rgba(16, 185, 129, 0.3)',
+    },
+    badgeNivel1Text: {
+      color: theme === 'dark' ? '#34d399' : '#059669',
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    content: {
+      padding: 20,
+      gap: 20,
+      maxWidth: 600,
+      width: '100%',
+      alignSelf: 'center',
+      alignItems: 'center',
+      paddingBottom: 40,
+    },
+    titleSection: {
+      alignItems: 'center',
+      gap: 8,
+    },
+    title: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: colors.text,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontSize: 13,
+      color: colors.textMuted,
+      textAlign: 'center',
+      lineHeight: 20,
+      maxWidth: 420,
+    },
+    stepsCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      gap: 12,
+      width: '100%',
+    },
+    stepsCardTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 2,
+    },
+    stepItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    stepBullet: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    stepText: {
+      fontSize: 13,
+      color: colors.textMuted,
+      flex: 1,
+      lineHeight: 18,
+    },
+    stepHighlight: {
+      color: colors.text,
+      fontWeight: '600',
+    },
+    calmExitButton: {
+      backgroundColor: colors.card,
+      borderWidth: 1.5,
+      borderColor: '#10b981',
+      paddingVertical: 14,
+      paddingHorizontal: 24,
+      borderRadius: 24,
+      width: '100%',
+      alignItems: 'center',
+      marginTop: 8,
+    },
+    calmExitButtonText: {
+      color: theme === 'dark' ? '#34d399' : '#059669',
+      fontSize: 15,
+      fontWeight: '700',
+    },
+  });

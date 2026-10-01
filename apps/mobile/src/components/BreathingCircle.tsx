@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { StyleSheet, Text, View, Animated, TouchableOpacity } from 'react-native';
+import { useTheme, ThemeColors } from '../contexts/ThemeContext';
 
 type BreathingPhase = 'idle' | 'inhale' | 'hold' | 'exhale';
 
@@ -38,6 +39,9 @@ interface BreathingCircleProps {
 }
 
 export const BreathingCircle: React.FC<BreathingCircleProps> = ({ onCycleComplete }) => {
+  const { theme, colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
+
   const [phase, setPhase] = useState<BreathingPhase>('idle');
   const [secondsLeft, setSecondsLeft] = useState<number>(0);
   const [isActive, setIsActive] = useState<boolean>(false);
@@ -232,121 +236,122 @@ export const BreathingCircle: React.FC<BreathingCircleProps> = ({ onCycleComplet
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    width: '100%',
-  },
-  circleWrapper: {
-    width: 240,
-    height: 240,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 24,
-  },
-  outerHalo: {
-    position: 'absolute',
-    width: 190,
-    height: 190,
-    borderRadius: 95,
-    backgroundColor: '#10b981',
-  },
-  animatedCircle: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: '#0d9488',
-    borderWidth: 3,
-    borderColor: '#2dd4bf',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  innerContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  idleIcon: {
-    fontSize: 40,
-  },
-  secondCounter: {
-    fontSize: 34,
-    fontWeight: '800',
-    color: '#ffffff',
-  },
-  phaseBadge: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#a7f3d0',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginTop: 2,
-  },
-  instructionsContainer: {
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    minHeight: 64,
-  },
-  instructionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#f8fafc',
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  instructionSubtext: {
-    fontSize: 14,
-    color: '#94a3b8',
-    textAlign: 'center',
-    lineHeight: 20,
-    maxWidth: 320,
-  },
-  cyclesBadge: {
-    marginTop: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-  },
-  cyclesText: {
-    color: '#34d399',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  controlsRow: {
-    marginTop: 24,
-    width: '100%',
-    alignItems: 'center',
-  },
-  startButton: {
-    backgroundColor: '#10b981',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 28,
-    minWidth: 220,
-    alignItems: 'center',
-  },
-  startButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  pauseButton: {
-    backgroundColor: '#334155',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 28,
-    minWidth: 220,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#475569',
-  },
-  pauseButtonText: {
-    color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
+const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
+  StyleSheet.create({
+    container: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 16,
+      width: '100%',
+    },
+    circleWrapper: {
+      width: 240,
+      height: 240,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginVertical: 24,
+    },
+    outerHalo: {
+      position: 'absolute',
+      width: 190,
+      height: 190,
+      borderRadius: 95,
+      backgroundColor: '#10b981',
+    },
+    animatedCircle: {
+      width: 140,
+      height: 140,
+      borderRadius: 70,
+      backgroundColor: '#0d9488',
+      borderWidth: 3,
+      borderColor: '#2dd4bf',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    innerContent: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    idleIcon: {
+      fontSize: 40,
+    },
+    secondCounter: {
+      fontSize: 34,
+      fontWeight: '800',
+      color: '#ffffff',
+    },
+    phaseBadge: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#a7f3d0',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginTop: 2,
+    },
+    instructionsContainer: {
+      alignItems: 'center',
+      paddingHorizontal: 24,
+      minHeight: 64,
+    },
+    instructionTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text,
+      textAlign: 'center',
+      marginBottom: 6,
+    },
+    instructionSubtext: {
+      fontSize: 14,
+      color: colors.textMuted,
+      textAlign: 'center',
+      lineHeight: 20,
+      maxWidth: 320,
+    },
+    cyclesBadge: {
+      marginTop: 12,
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+      borderRadius: 16,
+      backgroundColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.12)',
+      borderWidth: 1,
+      borderColor: 'rgba(16, 185, 129, 0.3)',
+    },
+    cyclesText: {
+      color: theme === 'dark' ? '#34d399' : '#059669',
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    controlsRow: {
+      marginTop: 24,
+      width: '100%',
+      alignItems: 'center',
+    },
+    startButton: {
+      backgroundColor: '#10b981',
+      paddingVertical: 14,
+      paddingHorizontal: 32,
+      borderRadius: 28,
+      minWidth: 220,
+      alignItems: 'center',
+    },
+    startButtonText: {
+      color: '#ffffff',
+      fontSize: 16,
+      fontWeight: '700',
+    },
+    pauseButton: {
+      backgroundColor: colors.card,
+      paddingVertical: 14,
+      paddingHorizontal: 32,
+      borderRadius: 28,
+      minWidth: 220,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    pauseButtonText: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  });

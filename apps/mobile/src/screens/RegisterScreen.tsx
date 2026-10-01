@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,8 +10,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme, ThemeColors } from '../contexts/ThemeContext';
 import type { Persona } from '../types/auth';
 
 interface RegisterScreenProps {
@@ -24,6 +26,8 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   onNavigateToWelcome,
 }) => {
   const { register } = useAuth();
+  const { theme, colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,6 +58,10 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar
+        barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -90,7 +98,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               <TextInput
                 style={styles.input}
                 placeholder="seu.email@exemplo.com"
-                placeholderTextColor="#64748b"
+                placeholderTextColor={colors.textMuted}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -106,7 +114,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               <TextInput
                 style={styles.input}
                 placeholder="Mínimo de 8 caracteres"
-                placeholderTextColor="#64748b"
+                placeholderTextColor={colors.textMuted}
                 secureTextEntry
                 autoCapitalize="none"
                 value={password}
@@ -190,7 +198,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               accessibilityState={{ disabled: !canSubmit }}
             >
               {isSubmitting ? (
-                <ActivityIndicator color="#f8fafc" />
+                <ActivityIndicator color={colors.primaryText} />
               ) : (
                 <Text
                   style={[styles.submitButtonText, !canSubmit && styles.submitButtonTextDisabled]}
@@ -213,192 +221,193 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 40,
-    maxWidth: 520,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  header: {
-    marginBottom: 24,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    marginBottom: 12,
-  },
-  backButtonText: {
-    color: '#0d9488',
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#f8fafc',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#94a3b8',
-    lineHeight: 20,
-  },
-  errorBox: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderWidth: 1,
-    borderColor: '#ef4444',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 20,
-  },
-  errorText: {
-    color: '#fca5a5',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  form: {
-    gap: 20,
-  },
-  inputGroup: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#f8fafc',
-  },
-  input: {
-    backgroundColor: '#1e293b',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: '#f8fafc',
-    fontSize: 15,
-  },
-  helperText: {
-    fontSize: 12,
-    color: '#64748b',
-  },
-  warningText: {
-    fontSize: 12,
-    color: '#f87171',
-  },
-  personaContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 4,
-  },
-  personaCard: {
-    flex: 1,
-    backgroundColor: '#1e293b',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    padding: 14,
-    alignItems: 'center',
-  },
-  personaCardSelected: {
-    borderColor: '#0d9488',
-    backgroundColor: 'rgba(13, 148, 136, 0.1)',
-  },
-  personaIcon: {
-    fontSize: 26,
-    marginBottom: 6,
-  },
-  personaTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#94a3b8',
-    marginBottom: 4,
-  },
-  personaTitleSelected: {
-    color: '#0d9488',
-  },
-  personaDesc: {
-    fontSize: 11,
-    color: '#64748b',
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    paddingVertical: 4,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: '#475569',
-    backgroundColor: '#1e293b',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  checkboxChecked: {
-    backgroundColor: '#0d9488',
-    borderColor: '#0d9488',
-  },
-  checkmark: {
-    color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  checkboxLabel: {
-    flex: 1,
-    fontSize: 13,
-    color: '#cbd5e1',
-    lineHeight: 18,
-  },
-  submitButton: {
-    backgroundColor: '#0d9488',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  submitButtonDisabled: {
-    backgroundColor: '#1e293b',
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  submitButtonText: {
-    color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  submitButtonTextDisabled: {
-    color: '#64748b',
-  },
-  footerLinkContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 12,
-  },
-  footerText: {
-    color: '#94a3b8',
-    fontSize: 14,
-  },
-  footerLink: {
-    color: '#0d9488',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});
+const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: 24,
+      paddingTop: 16,
+      paddingBottom: 40,
+      maxWidth: 520,
+      width: '100%',
+      alignSelf: 'center',
+    },
+    header: {
+      marginBottom: 24,
+    },
+    backButton: {
+      alignSelf: 'flex-start',
+      paddingVertical: 8,
+      paddingHorizontal: 4,
+      marginBottom: 12,
+    },
+    backButtonText: {
+      color: colors.primary,
+      fontSize: 15,
+      fontWeight: '500',
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    subtitle: {
+      fontSize: 14,
+      color: colors.textMuted,
+      lineHeight: 20,
+    },
+    errorBox: {
+      backgroundColor: 'rgba(239, 68, 68, 0.15)',
+      borderWidth: 1,
+      borderColor: '#ef4444',
+      borderRadius: 10,
+      padding: 12,
+      marginBottom: 20,
+    },
+    errorText: {
+      color: theme === 'dark' ? '#fca5a5' : '#b91c1c',
+      fontSize: 14,
+      lineHeight: 20,
+    },
+    form: {
+      gap: 20,
+    },
+    inputGroup: {
+      gap: 6,
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    input: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      borderRadius: 10,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      color: colors.text,
+      fontSize: 15,
+    },
+    helperText: {
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    warningText: {
+      fontSize: 12,
+      color: '#ef4444',
+    },
+    personaContainer: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 4,
+    },
+    personaCard: {
+      flex: 1,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      borderRadius: 12,
+      padding: 14,
+      alignItems: 'center',
+    },
+    personaCardSelected: {
+      borderColor: colors.primary,
+      backgroundColor: theme === 'dark' ? 'rgba(13, 148, 136, 0.15)' : 'rgba(15, 118, 110, 0.08)',
+    },
+    personaIcon: {
+      fontSize: 26,
+      marginBottom: 6,
+    },
+    personaTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textMuted,
+      marginBottom: 4,
+    },
+    personaTitleSelected: {
+      color: colors.primary,
+    },
+    personaDesc: {
+      fontSize: 11,
+      color: colors.textMuted,
+      textAlign: 'center',
+      lineHeight: 16,
+    },
+    checkboxContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 12,
+      paddingVertical: 4,
+    },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      borderWidth: 1.5,
+      borderColor: colors.cardBorder,
+      backgroundColor: colors.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 2,
+    },
+    checkboxChecked: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    checkmark: {
+      color: colors.primaryText,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    checkboxLabel: {
+      flex: 1,
+      fontSize: 13,
+      color: colors.text,
+      lineHeight: 18,
+    },
+    submitButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginTop: 10,
+    },
+    submitButtonDisabled: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    submitButtonText: {
+      color: colors.primaryText,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    submitButtonTextDisabled: {
+      color: colors.textMuted,
+    },
+    footerLinkContainer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 12,
+    },
+    footerText: {
+      color: colors.textMuted,
+      fontSize: 14,
+    },
+    footerLink: {
+      color: colors.primary,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+  });

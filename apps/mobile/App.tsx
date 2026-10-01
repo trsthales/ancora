@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, StatusBar, ActivityIndicator } from 'react-native';
 import { registerRootComponent } from 'expo';
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { SOSProvider, useSOS } from './src/contexts/SOSContext';
 import { SOSFloatingButton } from './src/components/SOSFloatingButton';
@@ -15,17 +16,28 @@ type UnauthenticatedScreen = 'welcome' | 'login' | 'register';
 function MainNavigator() {
   const { isLoading, isAuthenticated, justRegistered } = useAuth();
   const { openSOS } = useSOS();
+  const { theme, colors } = useTheme();
   const [currentScreen, setCurrentScreen] = useState<UnauthenticatedScreen>('welcome');
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
-        <View style={styles.loadingCard}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <StatusBar
+          barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
+          backgroundColor={colors.background}
+        />
+        <View
+          style={[
+            styles.loadingCard,
+            { backgroundColor: colors.card, borderColor: colors.cardBorder },
+          ]}
+        >
           <Text style={styles.loadingIcon}>⚓</Text>
-          <Text style={styles.loadingTitle}>Âncora</Text>
-          <Text style={styles.loadingSlogan}>Firmeza para atravessar a tempestade.</Text>
-          <ActivityIndicator size="small" color="#0d9488" style={styles.spinner} />
+          <Text style={[styles.loadingTitle, { color: colors.text }]}>Âncora</Text>
+          <Text style={[styles.loadingSlogan, { color: colors.textMuted }]}>
+            Firmeza para atravessar a tempestade.
+          </Text>
+          <ActivityIndicator size="small" color={colors.primary} style={styles.spinner} />
         </View>
       </View>
     );
@@ -34,7 +46,11 @@ function MainNavigator() {
   if (isAuthenticated) {
     if (justRegistered) {
       return (
-        <View style={styles.appContainer}>
+        <View style={[styles.appContainer, { backgroundColor: colors.background }]}>
+          <StatusBar
+            barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
+            backgroundColor={colors.background}
+          />
           <IdentityRevealScreen />
           <SOSFloatingButton onPress={openSOS} />
         </View>
@@ -68,7 +84,11 @@ function MainNavigator() {
   }
 
   return (
-    <View style={styles.appContainer}>
+    <View style={[styles.appContainer, { backgroundColor: colors.background }]}>
+      <StatusBar
+        barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       {content}
       <SOSFloatingButton onPress={openSOS} />
     </View>
@@ -77,11 +97,13 @@ function MainNavigator() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <SOSProvider>
-        <MainNavigator />
-      </SOSProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <SOSProvider>
+          <MainNavigator />
+        </SOSProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
