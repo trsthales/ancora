@@ -2,10 +2,12 @@ import crypto from 'node:crypto';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import { sql } from 'drizzle-orm';
+import { z } from 'zod';
 import { env } from './env.js';
 import { db } from './db/index.js';
 import { startQueue, stopQueue, isQueueRunning } from './queue/index.js';
 import { loggerConfig } from './lib/logger.js';
+import { authRoutes } from './routes/index.js';
 
 export const buildServer = async () => {
   const app = Fastify({
@@ -20,8 +22,39 @@ export const buildServer = async () => {
     requestIdHeader: 'x-request-id',
   });
 
+  app.setErrorHandler((error: unknown, request, reply) => {
+    if (error instanceof z.ZodError) {
+      return reply.status(400).send({
+        status: 'error',
+        message: error.issues[0]?.message || 'Dados inválidos',
+        errors: error.flatten().fieldErrors,
+      });
+    }
+
+    const errorObj = error && typeof error === 'object' ? (error as Record<string, unknown>) : null;
+    const statusCode = typeof errorObj?.statusCode === 'number' ? errorObj.statusCode : 500;
+    const message = error instanceof Error ? error.message : 'Erro interno no servidor';
+
+    if (statusCode < 500) {
+      return reply.status(statusCode).send({
+        status: 'error',
+        message,
+      });
+    }
+
+    request.log.error(error);
+    return reply.status(statusCode).send({
+      status: 'error',
+      message: 'Erro interno no servidor',
+    });
+  });
+
   await app.register(cors, {
     origin: true,
+  });
+
+  await app.register(authRoutes, {
+    prefix: '/api/v1/auth',
   });
 
   app.addHook('onClose', async () => {
