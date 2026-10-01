@@ -208,12 +208,14 @@ export const journeyRoutes: FastifyPluginAsync = async (app) => {
         .orderBy(desc(checkins.createdAt))
         .limit(limit);
 
-      const countResult = await db
-        .select({ count: sql<number>`count(*)` })
+      const [countResult] = await db
+        .select({
+          count: sql<number>`cast(count(distinct date(created_at)) as integer)`,
+        })
         .from(checkins)
         .where(eq(checkins.profileId, profileId));
 
-      const totalCheckins = Number(countResult[0]?.count ?? 0);
+      const totalCheckins = Number(countResult?.count ?? 0);
 
       const history = rawHistory.map((item) => ({
         id: item.id,
