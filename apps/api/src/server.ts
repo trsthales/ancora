@@ -8,7 +8,7 @@ import { env } from './env.js';
 import { db } from './db/index.js';
 import { startQueue, stopQueue, isQueueRunning } from './queue/index.js';
 import { loggerConfig } from './lib/logger.js';
-import { authRoutes, profileRoutes } from './routes/index.js';
+import { authRoutes, profileRoutes, journeyRoutes } from './routes/index.js';
 
 export const buildServer = async () => {
   const app = Fastify({
@@ -75,6 +75,10 @@ export const buildServer = async () => {
 
   await app.register(profileRoutes, {
     prefix: '/api/v1/profile',
+  });
+
+  await app.register(journeyRoutes, {
+    prefix: '/api/v1/journey',
   });
 
   app.addHook('onClose', async () => {
