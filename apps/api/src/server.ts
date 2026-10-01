@@ -1,13 +1,23 @@
-import Fastify from 'fastify';
+import crypto from 'node:crypto';
+import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import { sql } from 'drizzle-orm';
 import { env } from './env.js';
 import { db } from './db/index.js';
 import { startQueue, stopQueue, isQueueRunning } from './queue/index.js';
+import { loggerConfig } from './lib/logger.js';
 
 export const buildServer = async () => {
   const app = Fastify({
-    logger: true,
+    logger: loggerConfig,
+    genReqId: (req) => {
+      const headerReqId = req.headers['x-request-id'];
+      if (typeof headerReqId === 'string' && headerReqId.length > 0) {
+        return headerReqId;
+      }
+      return crypto.randomUUID();
+    },
+    requestIdHeader: 'x-request-id',
   });
 
   await app.register(cors, {
@@ -49,6 +59,16 @@ export const buildServer = async () => {
 
     return response;
   });
+
+  if (env.NODE_ENV !== 'production') {
+    const testLogHandler = async (request: FastifyRequest, _reply: FastifyReply) => {
+      request.log.info({ body: request.body }, 'Validando mascaramento de dados sensíveis');
+      return { ok: true };
+    };
+
+    app.post('/test-log', testLogHandler);
+    app.post('/api/v1/test-log', testLogHandler);
+  }
 
   return app;
 };
