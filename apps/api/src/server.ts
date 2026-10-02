@@ -2,15 +2,19 @@ import crypto from 'node:crypto';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import fastifyJwt from '@fastify/jwt';
+import fastifyRateLimit from '@fastify/rate-limit';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { env } from './env.js';
 import { db } from './db/index.js';
 import { startQueue, stopQueue, isQueueRunning } from './queue/index.js';
 import { loggerConfig } from './lib/logger.js';
+import { initDummyHash } from './lib/hash.js';
 import { authRoutes, profileRoutes, journeyRoutes } from './routes/index.js';
 
 export const buildServer = async () => {
+  await initDummyHash();
+
   const app = Fastify({
     logger: loggerConfig,
     genReqId: (req) => {
@@ -52,6 +56,10 @@ export const buildServer = async () => {
 
   await app.register(cors, {
     origin: true,
+  });
+
+  await app.register(fastifyRateLimit, {
+    global: false,
   });
 
   await app.register(fastifyJwt, {
