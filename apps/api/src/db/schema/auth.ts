@@ -26,5 +26,6 @@ export const sessions = authSchema.table('sessions', {
   refreshTokenHash: varchar('refresh_token_hash', { length: 255 }).notNull(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  rotatedToSessionId: uuid('rotated_to_session_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });

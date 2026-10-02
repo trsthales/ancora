@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-const NOUNS = [
+export const NOUNS = [
   'Caminho',
   'Farol',
   'Brisa',
@@ -9,11 +9,33 @@ const NOUNS = [
   'Horizonte',
   'Vento',
   'Abrigo',
-  'Sereno',
-  'Firme',
+  'Refugio',
+  'Recanto',
+  'Aurora',
+  'Alvorada',
+  'Jardim',
+  'Bosque',
+  'Manancial',
+  'Oceano',
+  'Colina',
+  'Estrela',
+  'Planalto',
+  'Raio',
+  'Lua',
+  'Sol',
+  'Cais',
+  'Vale',
+  'Riacho',
+  'Semente',
+  'Arvore',
+  'Raiz',
+  'Claridade',
+  'Remanso',
+  'Ninho',
+  'Fonte',
 ] as const;
 
-const QUALIFIERS = [
+export const QUALIFIERS = [
   'Calmo',
   'Seguro',
   'Livre',
@@ -22,17 +44,36 @@ const QUALIFIERS = [
   'Forte',
   'Atento',
   'Claro',
+  'Manso',
+  'Tranquilo',
+  'Brilhante',
+  'Suave',
+  'Pacifico',
+  'Radiante',
+  'Constante',
+  'Consciente',
+  'Generoso',
+  'Acolhedor',
+  'Lucido',
+  'Resiliente',
+  'Valente',
+  'Sincero',
+  'Justo',
+  'Vigilante',
+  'Sereno',
+  'Firme',
 ] as const;
 
 /**
  * Generates a neutral and respectful pseudonym following the format:
- * @<Noun><Qualifier>_<2-3 digit number>
- * Example: @FarolSeguro_42 or @PassoCalmo_108
+ * @<Noun><Qualifier>_<4 digit number>
+ * Example: @FarolSeguro_1042 or @PassoCalmo_8108
  */
 export function generatePseudonym(): string {
   const noun = NOUNS[crypto.randomInt(0, NOUNS.length)];
   const qualifier = QUALIFIERS[crypto.randomInt(0, QUALIFIERS.length)];
-  const suffix = crypto.randomInt(10, 1000); // 10 to 999 (2 to 3 digits)
+  const suffix = crypto.randomInt(1000, 10000); // 1000 to 9999 (4 digits)
 
   return `@${noun}${qualifier}_${suffix}`;
 }
+

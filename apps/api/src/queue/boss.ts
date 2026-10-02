@@ -5,7 +5,7 @@ export const bossConfig: ConstructorOptions = {
   connectionString: env.DATABASE_URL,
   schema: 'pgboss',
   application_name: 'ancora-api',
-  max: 10,
+  max: 5,
   supervise: true,
   monitorVacuum: true,
 };
