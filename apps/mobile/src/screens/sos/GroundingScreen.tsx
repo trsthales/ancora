@@ -270,8 +270,9 @@ export const GroundingScreen: React.FC<GroundingScreenProps> = ({ onBack }) => {
             </View>
             <Text style={styles.successTitle}>Você está no presente.</Text>
             <Text style={styles.successSubheading}>
-              Seus pés estão firmes no chão. Você respirou, sentiu o ambiente e superou este momento
-              com consciência.
+              Seus pés estão firmes no chão. Você atravessou este pico de intensidade com presença.
+              Lembre-se: a fissura se comporta como uma maré. Caso o impulso persista, repita o
+              exercício ou acione um canal de apoio.
             </Text>
 
             <View style={styles.reassuranceCard}>

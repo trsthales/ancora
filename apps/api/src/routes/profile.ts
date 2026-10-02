@@ -5,6 +5,7 @@ import { db } from '../db/index.js';
 import { profiles } from '../db/schema/index.js';
 import { AVAILABLE_AVATARS, AVATAR_IDS } from '../lib/avatars.js';
 import { generatePseudonym } from '../lib/pseudonym.js';
+import { deriveAccountToken } from '../lib/crypto-token.js';
 
 export const rotateIdentitySchema = z.object({
   avatarId: z
@@ -40,7 +41,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         lastSeenAt: profiles.lastSeenAt,
       })
       .from(profiles)
-      .where(eq(profiles.userId, userId))
+      .where(eq(profiles.accountToken, deriveAccountToken(userId)))
       .limit(1);
 
     if (!profile) {
@@ -127,7 +128,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
       const [updatedProfile] = await db
         .update(profiles)
         .set(updateData)
-        .where(eq(profiles.userId, userId))
+        .where(eq(profiles.accountToken, deriveAccountToken(userId)))
         .returning();
 
       if (!updatedProfile) {

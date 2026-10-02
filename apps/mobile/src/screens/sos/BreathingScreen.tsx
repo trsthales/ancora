@@ -31,8 +31,18 @@ export const BreathingScreen: React.FC<BreathingScreenProps> = ({ onBack }) => {
         <View style={styles.titleSection}>
           <Text style={styles.title}>Respiração Guiada 4-7-8</Text>
           <Text style={styles.subtitle}>
-            A técnica de respiração 4-7-8 atua diretamente no sistema parassimpático, desacelerando
-            os batimentos e reduzindo a intensidade de impulsos e fissuras.
+            A respiração compassada é uma prática amplamente utilizada para apoiar a autorregulação,
+            desacelerar batimentos e auxiliar na travessia de momentos de ansiedade e impulso.
+          </Text>
+        </View>
+
+        {/* Aviso Clínico de Segurança */}
+        <View style={styles.safetyBox}>
+          <Text style={styles.safetyIcon}>⚠️</Text>
+          <Text style={styles.safetyText}>
+            <Text style={styles.safetyBold}>Importante:</Text> caso sinta tontura, desconforto
+            respiratório ou mal-estar, interrompa o exercício imediatamente e volte ao seu ritmo
+            respiratório natural.
           </Text>
         </View>
 
@@ -65,15 +75,15 @@ export const BreathingScreen: React.FC<BreathingScreenProps> = ({ onBack }) => {
           </View>
         </View>
 
-        {/* Botão de Saída Rápida Obrigatório */}
+        {/* Botão de Saída Neutro */}
         <TouchableOpacity
           style={styles.calmExitButton}
           onPress={onBack}
           activeOpacity={0.8}
           accessibilityRole="button"
-          accessibilityLabel="Estou mais calmo, voltar"
+          accessibilityLabel="Concluir e voltar ao SOS"
         >
-          <Text style={styles.calmExitButtonText}>🌿 Estou mais calmo, voltar</Text>
+          <Text style={styles.calmExitButtonText}>Concluir e voltar ao SOS</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -197,6 +207,30 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
     calmExitButtonText: {
       color: theme === 'dark' ? '#34d399' : '#059669',
       fontSize: 15,
+      fontWeight: '700',
+    },
+    safetyBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      backgroundColor: theme === 'dark' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(245, 158, 11, 0.15)',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(245, 158, 11, 0.35)' : 'rgba(245, 158, 11, 0.5)',
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      width: '100%',
+    },
+    safetyIcon: {
+      fontSize: 18,
+    },
+    safetyText: {
+      flex: 1,
+      fontSize: 12,
+      color: theme === 'dark' ? '#fde68a' : '#92400e',
+      lineHeight: 18,
+    },
+    safetyBold: {
       fontWeight: '700',
     },
   });

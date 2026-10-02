@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { checkins, profiles } from '../db/schema/index.js';
+import { deriveAccountToken } from '../lib/crypto-token.js';
 
 export const createCheckinSchema = z.object({
   cravingLevel: z
@@ -48,7 +49,7 @@ export const journeyRoutes: FastifyPluginAsync = async (app) => {
       const [profile] = await db
         .select({ id: profiles.id })
         .from(profiles)
-        .where(eq(profiles.userId, request.user.sub))
+        .where(eq(profiles.accountToken, deriveAccountToken(request.user.sub)))
         .limit(1);
 
       if (!profile) {
@@ -115,7 +116,7 @@ export const journeyRoutes: FastifyPluginAsync = async (app) => {
       const [profile] = await db
         .select({ id: profiles.id })
         .from(profiles)
-        .where(eq(profiles.userId, request.user.sub))
+        .where(eq(profiles.accountToken, deriveAccountToken(request.user.sub)))
         .limit(1);
 
       if (!profile) {
@@ -188,7 +189,7 @@ export const journeyRoutes: FastifyPluginAsync = async (app) => {
       const [profile] = await db
         .select({ id: profiles.id })
         .from(profiles)
-        .where(eq(profiles.userId, request.user.sub))
+        .where(eq(profiles.accountToken, deriveAccountToken(request.user.sub)))
         .limit(1);
 
       if (!profile) {
