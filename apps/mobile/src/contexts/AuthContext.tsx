@@ -7,7 +7,7 @@ import type {
   ApiSuccessResponse,
   Persona,
 } from '../types/auth';
-import { apiFetch } from '../services/api';
+import { apiFetch, recoverAccountApi } from '../services/api';
 import { storage } from '../services/storage';
 
 interface AuthContextData {
@@ -16,8 +16,10 @@ interface AuthContextData {
   isLoading: boolean;
   isAuthenticated: boolean;
   justRegistered: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, isAdult: boolean, persona: Persona) => Promise<void>;
+  recoveryKey: string | null;
+  login: (identifier: string, password: string) => Promise<void>;
+  register: (password: string, isAdult: boolean, persona: Persona) => Promise<void>;
+  recoverAccount: (pseudonym: string, recoveryKey: string, newPassword: string) => Promise<string>;
   logout: () => Promise<void>;
   acknowledgeIdentity: () => void;
 }
@@ -29,6 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [justRegistered, setJustRegistered] = useState<boolean>(false);
+  const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
 
   useEffect(() => {
     async function restoreSession() {
@@ -59,10 +62,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     restoreSession();
   }, []);
 
-  const login = async (email: string, password: string): Promise<void> => {
+  const login = async (identifier: string, password: string): Promise<void> => {
     const response = await apiFetch<ApiSuccessResponse<AuthResponse>>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ identifier, password }),
     });
 
     const { accessToken, refreshToken, user: loggedUser, profile: loggedProfile } = response.data;
@@ -71,39 +74,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setUser(loggedUser);
     setProfile(loggedProfile);
+    setRecoveryKey(null);
     setJustRegistered(false);
   };
 
   const register = async (
-    email: string,
     password: string,
     isAdult: boolean,
     persona: Persona,
   ): Promise<void> => {
-    // 1. Registrar conta na API
     const regResponse = await apiFetch<ApiSuccessResponse<RegisterResponse>>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, isAdult, persona }),
-    });
-
-    // 2. Fazer login automático para obter os tokens
-    const loginResponse = await apiFetch<ApiSuccessResponse<AuthResponse>>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ password, isAdult, persona }),
     });
 
     const {
       accessToken,
       refreshToken,
-      user: loggedUser,
-      profile: loggedProfile,
-    } = loginResponse.data;
+      recoveryKey: returnedRecoveryKey,
+      user: registeredUser,
+      profile: registeredProfile,
+    } = regResponse.data;
+
+    if (accessToken) {
+      await storage.setItem('accessToken', accessToken);
+    }
+    if (refreshToken) {
+      await storage.setItem('refreshToken', refreshToken);
+    }
+
+    setUser(registeredUser);
+    setProfile(registeredProfile);
+    setRecoveryKey(returnedRecoveryKey || null);
+    setJustRegistered(true);
+  };
+
+  const recoverAccount = async (
+    pseudonym: string,
+    recoveryKeyInput: string,
+    newPassword: string,
+  ): Promise<string> => {
+    const response = await recoverAccountApi({
+      pseudonym,
+      recoveryKey: recoveryKeyInput,
+      newPassword,
+    });
+
+    const {
+      accessToken,
+      refreshToken,
+      recoveryKey: newRecoveryKey,
+      user: recoveredUser,
+      profile: recoveredProfile,
+    } = response.data;
+
     await storage.setItem('accessToken', accessToken);
     await storage.setItem('refreshToken', refreshToken);
 
-    setUser(loggedUser || regResponse.data.user);
-    setProfile(loggedProfile || regResponse.data.profile);
-    setJustRegistered(true);
+    setUser(recoveredUser);
+    setProfile(recoveredProfile);
+    setRecoveryKey(newRecoveryKey);
+    setJustRegistered(false);
+
+    return newRecoveryKey;
   };
 
   const logout = async (): Promise<void> => {
@@ -120,12 +153,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await storage.removeItem('refreshToken');
       setUser(null);
       setProfile(null);
+      setRecoveryKey(null);
       setJustRegistered(false);
     }
   };
 
   const acknowledgeIdentity = () => {
     setJustRegistered(false);
+    setRecoveryKey(null);
   };
 
   const value = useMemo(
@@ -135,12 +170,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isLoading,
       isAuthenticated: Boolean(user && profile),
       justRegistered,
+      recoveryKey,
       login,
       register,
+      recoverAccount,
       logout,
       acknowledgeIdentity,
     }),
-    [user, profile, isLoading, justRegistered],
+    [user, profile, isLoading, justRegistered, recoveryKey],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -153,3 +190,4 @@ export const useAuth = (): AuthContextData => {
   }
   return context;
 };
+

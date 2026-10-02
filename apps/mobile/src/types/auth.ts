@@ -2,7 +2,7 @@ export type Persona = 'navegador' | 'apoio';
 
 export interface User {
   id: string;
-  email: string;
+  email?: string | null;
   role: string;
   isAdult?: boolean;
   createdAt: string;
@@ -20,11 +20,29 @@ export interface Profile {
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
+  recoveryKey?: string;
   user: User;
   profile: Profile;
 }
 
 export interface RegisterResponse {
+  accessToken?: string;
+  refreshToken?: string;
+  recoveryKey?: string;
+  user: User;
+  profile: Profile;
+}
+
+export interface RecoverRequest {
+  pseudonym: string;
+  recoveryKey: string;
+  newPassword: string;
+}
+
+export interface RecoverResponse {
+  accessToken: string;
+  refreshToken: string;
+  recoveryKey: string;
   user: User;
   profile: Profile;
 }
