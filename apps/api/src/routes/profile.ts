@@ -2,10 +2,10 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { profiles } from '../db/schema/index.js';
+import { users, profiles, quarantinedPseudonyms } from '../db/schema/index.js';
 import { AVAILABLE_AVATARS, AVATAR_IDS } from '../lib/avatars.js';
-import { generatePseudonym } from '../lib/pseudonym.js';
-import { deriveAccountToken } from '../lib/crypto-token.js';
+import { generateAvailablePseudonym } from '../lib/pseudonym.js';
+import { deriveAccountToken, deriveLoginToken } from '../lib/crypto-token.js';
 
 export const rotateIdentitySchema = z.object({
   avatarId: z
@@ -91,52 +91,80 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
     const userId = request.user.sub;
 
     try {
-      let newPseudonym: string | undefined;
+      const result = await db.transaction(async (tx) => {
+        const [currentProfile] = await tx
+          .select()
+          .from(profiles)
+          .where(eq(profiles.accountToken, deriveAccountToken(userId)))
+          .for('update')
+          .limit(1);
 
-      if (regeneratePseudonym) {
-        newPseudonym = generatePseudonym();
-        for (let attempt = 0; attempt < 5; attempt++) {
-          const [existingProfile] = await db
-            .select({ id: profiles.id })
-            .from(profiles)
-            .where(eq(profiles.pseudonym, newPseudonym))
-            .limit(1);
-
-          if (!existingProfile) {
-            break;
-          }
-          newPseudonym = generatePseudonym();
+        if (!currentProfile) {
+          return { error: 404, message: 'Perfil não encontrado.' };
         }
-      }
 
-      const updateData: {
-        pseudonym?: string;
-        avatarId?: string;
-        lastSeenAt?: Date;
-      } = {
-        lastSeenAt: new Date(),
-      };
+        let newPseudonym: string | undefined;
 
-      if (newPseudonym) {
-        updateData.pseudonym = newPseudonym;
-      }
+        if (regeneratePseudonym) {
+          newPseudonym = await generateAvailablePseudonym(tx);
 
-      if (avatarId) {
-        updateData.avatarId = avatarId;
-      }
+          // 1. Inserir o pseudônimo antigo na quarentena por 30 dias
+          const quarantinedUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+          await tx
+            .insert(quarantinedPseudonyms)
+            .values({
+              pseudonym: currentProfile.pseudonym,
+              quarantinedUntil,
+            })
+            .onConflictDoUpdate({
+              target: quarantinedPseudonyms.pseudonym,
+              set: { quarantinedUntil },
+            });
 
-      const [updatedProfile] = await db
-        .update(profiles)
-        .set(updateData)
-        .where(eq(profiles.accountToken, deriveAccountToken(userId)))
-        .returning();
+          // 2. Atualizar atomicamente o loginToken na tabela users
+          const newLoginToken = deriveLoginToken(newPseudonym);
+          await tx
+            .update(users)
+            .set({
+              loginToken: newLoginToken,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, userId));
+        }
 
-      if (!updatedProfile) {
-        return reply.status(404).send({
+        const updateData: {
+          pseudonym?: string;
+          avatarId?: string;
+          lastSeenAt?: Date;
+        } = {
+          lastSeenAt: new Date(),
+        };
+
+        if (newPseudonym) {
+          updateData.pseudonym = newPseudonym;
+        }
+
+        if (avatarId) {
+          updateData.avatarId = avatarId;
+        }
+
+        const [updatedProfile] = await tx
+          .update(profiles)
+          .set(updateData)
+          .where(eq(profiles.id, currentProfile.id))
+          .returning();
+
+        return { success: true, updatedProfile };
+      });
+
+      if ('error' in result && result.error) {
+        return reply.status(result.error).send({
           status: 'error',
-          message: 'Perfil não encontrado.',
+          message: result.message,
         });
       }
+
+      const { updatedProfile } = result as { updatedProfile: typeof profiles.$inferSelect };
 
       return reply.status(200).send({
         status: 'success',

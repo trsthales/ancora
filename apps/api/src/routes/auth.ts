@@ -1,20 +1,17 @@
 import crypto from 'node:crypto';
-import type { FastifyPluginAsync } from 'fastify';
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { users, profiles, sessions } from '../db/schema/index.js';
-import { hashPassword, verifyPassword } from '../lib/hash.js';
-import { generatePseudonym } from '../lib/pseudonym.js';
+import { users, profiles, sessions, consents, checkins } from '../db/schema/index.js';
+import { hashPassword, verifyPassword, getDummyHash } from '../lib/hash.js';
+import { generateAvailablePseudonym } from '../lib/pseudonym.js';
 import {
   deriveAccountToken,
   deriveLoginToken,
   generateRecoveryKey,
   hashRecoveryKey,
 } from '../lib/crypto-token.js';
-
-const DUMMY_ARGON2_HASH =
-  '$argon2id$v=19$m=65536,p=4,t=3$FTM81xsLNE3c35g2zCioug$iwShqiajdwCymhF/NElrqUSNQAdTwMknCCrvCAcsc/M';
 
 export const registerBodySchema = z.object({
   email: z
@@ -31,6 +28,14 @@ export const registerBodySchema = z.object({
       errorMap: () => ({ message: "A persona deve ser 'navegador' ou 'apoio'." }),
     })
     .default('navegador'),
+  termsVersion: z.string().default('2026.1'),
+  privacyPolicyVersion: z.string().default('2026.1'),
+  healthDataConsent: z.literal(true, {
+    errorMap: () => ({
+      message:
+        'O consentimento explícito para tratamento de dados de saúde e suporte à recuperação é obrigatório.',
+    }),
+  }),
 });
 
 export type RegisterBodyInput = z.infer<typeof registerBodySchema>;
@@ -85,7 +90,14 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
-    const { email, password, persona } = parseResult.data;
+    const {
+      email,
+      password,
+      persona,
+      termsVersion,
+      privacyPolicyVersion,
+      healthDataConsent,
+    } = parseResult.data;
 
     try {
       const registrationResult = await db.transaction(async (tx) => {
@@ -110,26 +122,20 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         const recoveryKeyHash = hashRecoveryKey(recoveryKey);
 
         // 4. Gerar pseudônimo automático único e loginToken
-        let pseudonym = generatePseudonym();
+        let pseudonym = await generateAvailablePseudonym(tx);
         let loginToken = deriveLoginToken(pseudonym);
 
         for (let attempt = 0; attempt < 5; attempt++) {
-          const [existingProfile] = await tx
-            .select({ id: profiles.id })
-            .from(profiles)
-            .where(eq(profiles.pseudonym, pseudonym))
-            .limit(1);
-
           const [existingUser] = await tx
             .select({ id: users.id })
             .from(users)
             .where(eq(users.loginToken, loginToken))
             .limit(1);
 
-          if (!existingProfile && !existingUser) {
+          if (!existingUser) {
             break;
           }
-          pseudonym = generatePseudonym();
+          pseudonym = await generateAvailablePseudonym(tx);
           loginToken = deriveLoginToken(pseudonym);
         }
 
@@ -154,6 +160,14 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         if (!createdUser) {
           throw new Error('Falha ao criar o registro de usuário.');
         }
+
+        // 5.1. Insert em auth_security.consents (Art. 11 LGPD)
+        await tx.insert(consents).values({
+          userId: createdUser.id,
+          termsVersion,
+          privacyPolicyVersion,
+          healthDataConsent,
+        });
 
         // 6. Insert em recovery_core.profiles
         const accountToken = deriveAccountToken(createdUser.id);
@@ -249,146 +263,167 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // POST /login
-  app.post('/login', async (request, reply) => {
-    const parseResult = loginBodySchema.safeParse(request.body);
-
-    if (!parseResult.success) {
-      const firstMessage = parseResult.error.issues[0]?.message ?? 'Dados de login inválidos.';
-      return reply.status(400).send({
-        status: 'error',
-        message: firstMessage,
-        errors: parseResult.error.flatten().fieldErrors,
-      });
-    }
-
-    const { identifier, password } = parseResult.data;
-    const loginToken = deriveLoginToken(identifier);
-
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.loginToken, loginToken))
-      .limit(1);
-
-    if (!user) {
-      // Executa dummy hash do Argon2id (tempo equiparado anti-timing attack)
-      await verifyPassword(DUMMY_ARGON2_HASH, password).catch(() => false);
-      return reply.status(401).send({
-        status: 'error',
-        message: 'Credenciais inválidas.',
-      });
-    }
-
-    const isPasswordValid = await verifyPassword(user.passwordHash, password);
-    if (!isPasswordValid) {
-      return reply.status(401).send({
-        status: 'error',
-        message: 'Credenciais inválidas.',
-      });
-    }
-
-    const [profile] = await db
-      .select()
-      .from(profiles)
-      .where(eq(profiles.accountToken, deriveAccountToken(user.id)))
-      .limit(1);
-
-    if (!profile) {
-      return reply.status(404).send({
-        status: 'error',
-        message: 'Perfil de usuário não encontrado.',
-      });
-    }
-
-    const accessToken = app.jwt.sign(
-      {
-        sub: user.id,
-        profileId: profile.id,
-        role: user.role,
-        persona: profile.persona,
-      },
-      { expiresIn: '15m' },
-    );
-
-    const refreshToken = crypto.randomBytes(32).toString('hex');
-    const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
-
-    await db.insert(sessions).values({
-      userId: user.id,
-      refreshTokenHash,
-      expiresAt,
-    });
-
-    const userCreatedAtFormatted =
-      user.createdAt instanceof Date
-        ? user.createdAt.toISOString()
-        : new Date(user.createdAt).toISOString();
-
-    return reply.status(200).send({
-      status: 'success',
-      data: {
-        accessToken,
-        refreshToken,
-        user: {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          createdAt: userCreatedAtFormatted,
+  app.post(
+    '/login',
+    {
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: 60 * 1000,
         },
-        profile: {
-          id: profile.id,
-          pseudonym: profile.pseudonym,
-          avatarId: profile.avatarId,
+      },
+    },
+    async (request, reply) => {
+      const parseResult = loginBodySchema.safeParse(request.body);
+
+      if (!parseResult.success) {
+        const firstMessage = parseResult.error.issues[0]?.message ?? 'Dados de login inválidos.';
+        return reply.status(400).send({
+          status: 'error',
+          message: firstMessage,
+          errors: parseResult.error.flatten().fieldErrors,
+        });
+      }
+
+      const { identifier, password } = parseResult.data;
+      const loginToken = deriveLoginToken(identifier);
+
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.loginToken, loginToken))
+        .limit(1);
+
+      if (!user) {
+        // Executa dummy hash do Argon2id (tempo equiparado anti-timing attack)
+        await verifyPassword(getDummyHash(), password).catch(() => false);
+        return reply.status(401).send({
+          status: 'error',
+          message: 'Credenciais inválidas.',
+        });
+      }
+
+      const isPasswordValid = await verifyPassword(user.passwordHash, password);
+      if (!isPasswordValid) {
+        return reply.status(401).send({
+          status: 'error',
+          message: 'Credenciais inválidas.',
+        });
+      }
+
+      const [profile] = await db
+        .select()
+        .from(profiles)
+        .where(eq(profiles.accountToken, deriveAccountToken(user.id)))
+        .limit(1);
+
+      if (!profile) {
+        return reply.status(404).send({
+          status: 'error',
+          message: 'Perfil de usuário não encontrado.',
+        });
+      }
+
+      const accessToken = app.jwt.sign(
+        {
+          sub: user.id,
+          profileId: profile.id,
+          role: user.role,
           persona: profile.persona,
         },
-      },
-    });
-  });
+        { expiresIn: '15m' },
+      );
+
+      const refreshToken = crypto.randomBytes(32).toString('hex');
+      const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
+
+      await db.insert(sessions).values({
+        userId: user.id,
+        refreshTokenHash,
+        expiresAt,
+      });
+
+      const userCreatedAtFormatted =
+        user.createdAt instanceof Date
+          ? user.createdAt.toISOString()
+          : new Date(user.createdAt).toISOString();
+
+      return reply.status(200).send({
+        status: 'success',
+        data: {
+          accessToken,
+          refreshToken,
+          user: {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            createdAt: userCreatedAtFormatted,
+          },
+          profile: {
+            id: profile.id,
+            pseudonym: profile.pseudonym,
+            avatarId: profile.avatarId,
+            persona: profile.persona,
+          },
+        },
+      });
+    },
+  );
 
   // POST /recover
-  app.post('/recover', async (request, reply) => {
-    const parseResult = recoverBodySchema.safeParse(request.body);
+  app.post(
+    '/recover',
+    {
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: 60 * 1000,
+        },
+      },
+    },
+    async (request, reply) => {
+      const parseResult = recoverBodySchema.safeParse(request.body);
 
-    if (!parseResult.success) {
-      const firstMessage = parseResult.error.issues[0]?.message ?? 'Dados de recuperação inválidos.';
-      return reply.status(400).send({
-        status: 'error',
-        message: firstMessage,
-        errors: parseResult.error.flatten().fieldErrors,
-      });
-    }
+      if (!parseResult.success) {
+        const firstMessage = parseResult.error.issues[0]?.message ?? 'Dados de recuperação inválidos.';
+        return reply.status(400).send({
+          status: 'error',
+          message: firstMessage,
+          errors: parseResult.error.flatten().fieldErrors,
+        });
+      }
 
-    const { pseudonym, recoveryKey, newPassword } = parseResult.data;
-    const loginToken = deriveLoginToken(pseudonym);
+      const { pseudonym, recoveryKey, newPassword } = parseResult.data;
+      const loginToken = deriveLoginToken(pseudonym);
 
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.loginToken, loginToken))
-      .limit(1);
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.loginToken, loginToken))
+        .limit(1);
 
-    if (!user) {
-      // Anti-timing attack dummy hash
-      await verifyPassword(DUMMY_ARGON2_HASH, newPassword).catch(() => false);
-      return reply.status(401).send({
-        status: 'error',
-        message: 'Credenciais de recuperação inválidas.',
-      });
-    }
+      if (!user) {
+        // Anti-timing attack dummy hash
+        await verifyPassword(getDummyHash(), newPassword).catch(() => false);
+        return reply.status(401).send({
+          status: 'error',
+          message: 'Credenciais de recuperação inválidas.',
+        });
+      }
 
-    const providedKeyHash = hashRecoveryKey(recoveryKey);
-    const isKeyValid =
-      providedKeyHash.length === user.recoveryKeyHash.length &&
-      crypto.timingSafeEqual(Buffer.from(providedKeyHash), Buffer.from(user.recoveryKeyHash));
+      const providedKeyHash = hashRecoveryKey(recoveryKey);
+      const isKeyValid =
+        providedKeyHash.length === user.recoveryKeyHash.length &&
+        crypto.timingSafeEqual(Buffer.from(providedKeyHash), Buffer.from(user.recoveryKeyHash));
 
-    if (!isKeyValid) {
-      await verifyPassword(DUMMY_ARGON2_HASH, newPassword).catch(() => false);
-      return reply.status(401).send({
-        status: 'error',
-        message: 'Credenciais de recuperação inválidas.',
-      });
-    }
+      if (!isKeyValid) {
+        await verifyPassword(getDummyHash(), newPassword).catch(() => false);
+        return reply.status(401).send({
+          status: 'error',
+          message: 'Credenciais de recuperação inválidas.',
+        });
+      }
 
     const [profile] = await db
       .select()
@@ -569,91 +604,218 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const { refreshToken } = parseResult.data;
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
 
-    const [session] = await db
-      .select()
-      .from(sessions)
-      .where(eq(sessions.refreshTokenHash, tokenHash))
-      .limit(1);
+    try {
+      const result = await db.transaction(async (tx) => {
+        // Busca da sessão dentro de db.transaction usando lock pessimista (.for('update'))
+        const [session] = await tx
+          .select()
+          .from(sessions)
+          .where(eq(sessions.refreshTokenHash, tokenHash))
+          .for('update')
+          .limit(1);
 
-    if (!session) {
-      return reply.status(401).send({
+        if (!session) {
+          return {
+            statusCode: 401,
+            body: {
+              status: 'error',
+              message: 'Refresh token inválido ou expirado.',
+            },
+          };
+        }
+
+        // Se session.revokedAt !== null:
+        if (session.revokedAt !== null) {
+          const elapsedSeconds = (Date.now() - session.revokedAt.getTime()) / 1000;
+
+          // Se elapsedSeconds <= 10 e session.rotatedToSessionId !== null:
+          // Trata-se de retry legítimo de rede móvel (4G). Não revogar sessões!
+          if (elapsedSeconds <= 10 && session.rotatedToSessionId !== null) {
+            const [successorSession] = await tx
+              .select()
+              .from(sessions)
+              .where(eq(sessions.id, session.rotatedToSessionId))
+              .for('update')
+              .limit(1);
+
+            if (!successorSession) {
+              await tx
+                .update(sessions)
+                .set({ revokedAt: new Date() })
+                .where(and(eq(sessions.userId, session.userId), isNull(sessions.revokedAt)));
+
+              return {
+                statusCode: 401,
+                body: {
+                  status: 'error',
+                  message: 'Tentativa de reúso de refresh token detectada.',
+                },
+              };
+            }
+
+            const [user] = await tx
+              .select()
+              .from(users)
+              .where(eq(users.id, session.userId))
+              .limit(1);
+
+            const [profile] = await tx
+              .select()
+              .from(profiles)
+              .where(eq(profiles.accountToken, deriveAccountToken(session.userId)))
+              .limit(1);
+
+            if (!user || !profile) {
+              return {
+                statusCode: 401,
+                body: {
+                  status: 'error',
+                  message: 'Usuário ou perfil não encontrado.',
+                },
+              };
+            }
+
+            const retryRefreshToken = crypto.randomBytes(32).toString('hex');
+            const retryRefreshTokenHash = crypto.createHash('sha256').update(retryRefreshToken).digest('hex');
+            const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
+
+            await tx
+              .update(sessions)
+              .set({
+                refreshTokenHash: retryRefreshTokenHash,
+                expiresAt: newExpiresAt,
+              })
+              .where(eq(sessions.id, successorSession.id));
+
+            const retryAccessToken = app.jwt.sign(
+              {
+                sub: user.id,
+                profileId: profile.id,
+                role: user.role,
+                persona: profile.persona,
+              },
+              { expiresIn: '15m' },
+            );
+
+            return {
+              statusCode: 200,
+              body: {
+                status: 'success',
+                data: {
+                  accessToken: retryAccessToken,
+                  refreshToken: retryRefreshToken,
+                },
+              },
+            };
+          }
+
+          // Se elapsedSeconds > 10: Violação real de segurança (reúso tardio).
+          // Revogar imediatamente todas as sessões ativas do usuário e retornar HTTP 401.
+          await tx
+            .update(sessions)
+            .set({ revokedAt: new Date() })
+            .where(and(eq(sessions.userId, session.userId), isNull(sessions.revokedAt)));
+
+          return {
+            statusCode: 401,
+            body: {
+              status: 'error',
+              message: 'Tentativa de reúso de refresh token detectada.',
+            },
+          };
+        }
+
+        // Checar expiração
+        if (new Date() > new Date(session.expiresAt)) {
+          return {
+            statusCode: 401,
+            body: {
+              status: 'error',
+              message: 'Refresh token expirado.',
+            },
+          };
+        }
+
+        // Se a sessão for válida (ativa):
+        const [user] = await tx
+          .select()
+          .from(users)
+          .where(eq(users.id, session.userId))
+          .limit(1);
+
+        const [profile] = await tx
+          .select()
+          .from(profiles)
+          .where(eq(profiles.accountToken, deriveAccountToken(session.userId)))
+          .limit(1);
+
+        if (!user || !profile) {
+          return {
+            statusCode: 401,
+            body: {
+              status: 'error',
+              message: 'Usuário ou perfil não encontrado.',
+            },
+          };
+        }
+
+        const newRefreshToken = crypto.randomBytes(32).toString('hex');
+        const newRefreshTokenHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
+
+        // Criar nova sessão em auth_security.sessions
+        const [newSession] = await tx
+          .insert(sessions)
+          .values({
+            userId: user.id,
+            refreshTokenHash: newRefreshTokenHash,
+            expiresAt,
+          })
+          .returning({ id: sessions.id });
+
+        if (!newSession) {
+          throw new Error('Falha ao criar nova sessão.');
+        }
+
+        // Atualizar sessão atual: revokedAt = NOW() e rotatedToSessionId = newSession.id
+        await tx
+          .update(sessions)
+          .set({
+            revokedAt: new Date(),
+            rotatedToSessionId: newSession.id,
+          })
+          .where(eq(sessions.id, session.id));
+
+        const newAccessToken = app.jwt.sign(
+          {
+            sub: user.id,
+            profileId: profile.id,
+            role: user.role,
+            persona: profile.persona,
+          },
+          { expiresIn: '15m' },
+        );
+
+        return {
+          statusCode: 200,
+          body: {
+            status: 'success',
+            data: {
+              accessToken: newAccessToken,
+              refreshToken: newRefreshToken,
+            },
+          },
+        };
+      });
+
+      return reply.status(result.statusCode).send(result.body);
+    } catch (error: unknown) {
+      request.log.error(error, 'Erro ao processar refresh token');
+      return reply.status(500).send({
         status: 'error',
-        message: 'Refresh token inválido ou expirado.',
+        message: 'Erro interno ao processar refresh token.',
       });
     }
-
-    // Detecção de Reúso (RTR - Refresh Token Rotation):
-    // Se a sessão encontrada já estiver com revokedAt !== null, significa que um token antigo vazou.
-    // Revogue todas as sessões do usuário imediatamente e retorne HTTP 401.
-    if (session.revokedAt !== null) {
-      await db
-        .update(sessions)
-        .set({ revokedAt: new Date() })
-        .where(eq(sessions.userId, session.userId));
-
-      return reply.status(401).send({
-        status: 'error',
-        message: 'Tentativa de reúso de refresh token detectada. Todas as sessões foram revogadas.',
-      });
-    }
-
-    // Checar expiração
-    if (new Date() > new Date(session.expiresAt)) {
-      return reply.status(401).send({
-        status: 'error',
-        message: 'Refresh token expirado.',
-      });
-    }
-
-    const [user] = await db.select().from(users).where(eq(users.id, session.userId)).limit(1);
-
-    const [profile] = await db
-      .select()
-      .from(profiles)
-      .where(eq(profiles.accountToken, deriveAccountToken(session.userId)))
-      .limit(1);
-
-    if (!user || !profile) {
-      return reply.status(401).send({
-        status: 'error',
-        message: 'Usuário ou perfil não encontrado.',
-      });
-    }
-
-    const newRefreshToken = crypto.randomBytes(32).toString('hex');
-    const newRefreshTokenHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
-
-    await db.transaction(async (tx) => {
-      // 1. Marca a sessão atual como revogada
-      await tx.update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.id, session.id));
-
-      // 2. Grava nova sessão no banco
-      await tx.insert(sessions).values({
-        userId: user.id,
-        refreshTokenHash: newRefreshTokenHash,
-        expiresAt,
-      });
-    });
-
-    // 3. Emite novo accessToken
-    const newAccessToken = app.jwt.sign(
-      {
-        sub: user.id,
-        profileId: profile.id,
-        role: user.role,
-        persona: profile.persona,
-      },
-      { expiresIn: '15m' },
-    );
-
-    return reply.status(200).send({
-      status: 'success',
-      data: {
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
-      },
-    });
   });
 
   // POST /logout
@@ -701,4 +863,52 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       message: 'Refresh token ou token de autenticação deve ser fornecido.',
     });
   });
+
+  // DELETE /account (Direito ao Esquecimento - Art. 18, VI da LGPD)
+  app.delete('/account', { preHandler: [app.authenticate] }, deleteAccountHandler);
 };
+
+export const deleteAccountHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+  const userId = request.user.sub;
+  const accountToken = deriveAccountToken(userId);
+
+  try {
+    await db.transaction(async (tx) => {
+      // 1. Buscar o perfil pelo accountToken para obter o profileId
+      const [profile] = await tx
+        .select({ id: profiles.id })
+        .from(profiles)
+        .where(eq(profiles.accountToken, accountToken))
+        .limit(1);
+
+      // 2. Deletar todos os check-ins associados ao profileId em recovery_core.checkins
+      if (profile) {
+        await tx.delete(checkins).where(eq(checkins.profileId, profile.id));
+        // 3. Deletar o perfil em recovery_core.profiles
+        await tx.delete(profiles).where(eq(profiles.id, profile.id));
+      }
+
+      // 4. Deletar todas as sessões em auth_security.sessions para o userId
+      await tx.delete(sessions).where(eq(sessions.userId, userId));
+
+      // 5. Deletar os consentimentos em auth_security.consents
+      await tx.delete(consents).where(eq(consents.userId, userId));
+
+      // 6. Deletar o usuário em auth_security.users
+      await tx.delete(users).where(eq(users.id, userId));
+    });
+
+    return reply.status(200).send({
+      status: 'success',
+      message:
+        'Conta e dados associados foram expurgados definitivamente em conformidade com o Art. 18, VI da LGPD.',
+    });
+  } catch (error: unknown) {
+    request.log.error(error, 'Falha ao processar expurgo de conta (Art. 18, VI LGPD)');
+    return reply.status(500).send({
+      status: 'error',
+      message: 'Erro interno ao processar o expurgo da conta.',
+    });
+  }
+};
+

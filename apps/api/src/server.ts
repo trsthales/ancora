@@ -2,25 +2,33 @@ import crypto from 'node:crypto';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import fastifyJwt from '@fastify/jwt';
+import fastifyRateLimit from '@fastify/rate-limit';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { env } from './env.js';
 import { db } from './db/index.js';
 import { startQueue, stopQueue, isQueueRunning } from './queue/index.js';
 import { loggerConfig } from './lib/logger.js';
-import { authRoutes, profileRoutes, journeyRoutes } from './routes/index.js';
+import { initDummyHash } from './lib/hash.js';
+import { authRoutes, profileRoutes, journeyRoutes, accountRoutes } from './routes/index.js';
 
 export const buildServer = async () => {
+  await initDummyHash();
+
   const app = Fastify({
     logger: loggerConfig,
     genReqId: (req) => {
       const headerReqId = req.headers['x-request-id'];
-      if (typeof headerReqId === 'string' && headerReqId.length > 0) {
+      if (typeof headerReqId === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(headerReqId)) {
         return headerReqId;
       }
       return crypto.randomUUID();
     },
-    requestIdHeader: 'x-request-id',
+    requestIdHeader: false,
+  });
+
+  app.addHook('onSend', async (request, reply) => {
+    reply.header('x-request-id', request.id);
   });
 
   app.setErrorHandler((error: unknown, request, reply) => {
@@ -54,6 +62,10 @@ export const buildServer = async () => {
     origin: true,
   });
 
+  await app.register(fastifyRateLimit, {
+    global: false,
+  });
+
   await app.register(fastifyJwt, {
     secret: env.JWT_SECRET,
   });
@@ -79,6 +91,10 @@ export const buildServer = async () => {
 
   await app.register(journeyRoutes, {
     prefix: '/api/v1/journey',
+  });
+
+  await app.register(accountRoutes, {
+    prefix: '/api/v1/account',
   });
 
   app.addHook('onClose', async () => {
@@ -116,16 +132,6 @@ export const buildServer = async () => {
 
     return response;
   });
-
-  if (env.NODE_ENV !== 'production') {
-    const testLogHandler = async (request: FastifyRequest, _reply: FastifyReply) => {
-      request.log.info({ body: request.body }, 'Validando mascaramento de dados sensíveis');
-      return { ok: true };
-    };
-
-    app.post('/test-log', testLogHandler);
-    app.post('/api/v1/test-log', testLogHandler);
-  }
 
   return app;
 };

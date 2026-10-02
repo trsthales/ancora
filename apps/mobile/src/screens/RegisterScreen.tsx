@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme, ThemeColors } from '../contexts/ThemeContext';
+import { TermsModal } from '../components/TermsModal';
 import type { Persona } from '../types/auth';
 
 interface RegisterScreenProps {
@@ -32,11 +33,13 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const [password, setPassword] = useState('');
   const [persona, setPersona] = useState<Persona>('navegador');
   const [isAdult, setIsAdult] = useState(false);
+  const [healthDataConsent, setHealthDataConsent] = useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const isPasswordValid = password.length >= 8;
-  const canSubmit = isAdult && isPasswordValid && !isSubmitting;
+  const canSubmit = isAdult && healthDataConsent && isPasswordValid && !isSubmitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -45,7 +48,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     setErrorMessage(null);
 
     try {
-      await register(password, isAdult, persona);
+      await register(password, isAdult, persona, healthDataConsent);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Não foi possível completar o cadastro.';
       setErrorMessage(msg);
@@ -170,6 +173,35 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               </Text>
             </TouchableOpacity>
 
+            {/* Consentimento Específico para Dados de Saúde (Art. 11 LGPD) */}
+            <TouchableOpacity
+              style={styles.checkboxContainer}
+              onPress={() => setHealthDataConsent(!healthDataConsent)}
+              activeOpacity={0.8}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: healthDataConsent }}
+            >
+              <View style={[styles.checkbox, healthDataConsent && styles.checkboxChecked]}>
+                {healthDataConsent && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.checkboxLabel}>
+                Concordo com o tratamento dos meus registros de recuperação e saúde exclusivamente para o suporte comunitário e proteção deste aplicativo (Art. 11 da LGPD).
+              </Text>
+            </TouchableOpacity>
+
+            {/* Link para visualização dos Termos v2026.1 */}
+            <TouchableOpacity
+              style={styles.termsLinkContainer}
+              onPress={() => setIsTermsModalOpen(true)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Ver Termos e Política de Privacidade (v2026.1)"
+            >
+              <Text style={styles.termsLinkText}>
+                📄 Ver Termos e Política de Privacidade (v2026.1)
+              </Text>
+            </TouchableOpacity>
+
             {/* Botão de Envio */}
             <TouchableOpacity
               style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
@@ -199,6 +231,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Modal com Síntese dos Termos e Política de Privacidade v2026.1 */}
+      <TermsModal
+        visible={isTermsModalOpen}
+        onClose={() => setIsTermsModalOpen(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -355,6 +393,19 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
       fontSize: 13,
       color: colors.text,
       lineHeight: 18,
+    },
+    termsLinkContainer: {
+      alignSelf: 'flex-start',
+      paddingVertical: 2,
+      paddingHorizontal: 2,
+      marginTop: -8,
+      marginBottom: 2,
+    },
+    termsLinkText: {
+      color: colors.primary,
+      fontSize: 13,
+      fontWeight: '600',
+      textDecorationLine: 'underline',
     },
     submitButton: {
       backgroundColor: colors.primary,

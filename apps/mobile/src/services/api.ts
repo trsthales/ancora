@@ -18,7 +18,87 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+export type AuthFailureCallback = () => void;
+let onAuthFailureCallback: AuthFailureCallback | null = null;
+
+export function setOnAuthFailureCallback(callback: AuthFailureCallback | null): void {
+  onAuthFailureCallback = callback;
+}
+
+export function getIsRefreshing(): boolean {
+  return isRefreshing;
+}
+
+export async function refreshAuthTokens(): Promise<string | null> {
+  if (refreshPromise) {
+    return refreshPromise; // Reutiliza a Promise em andamento (Mutex)
+  }
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const currentRefreshToken = await storage.getItem('refreshToken');
+      if (!currentRefreshToken) {
+        throw new Error('Sem refresh token');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ refreshToken: currentRefreshToken }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Falha ao renovar token (${response.status})`);
+      }
+
+      const payload = await response.json();
+      const accessToken = payload?.data?.accessToken;
+      const newRefreshToken = payload?.data?.refreshToken;
+
+      if (!accessToken) {
+        throw new Error('Novo accessToken ausente na resposta de renovação');
+      }
+
+      await storage.setItem('accessToken', accessToken);
+      if (newRefreshToken) {
+        await storage.setItem('refreshToken', newRefreshToken);
+      }
+
+      return accessToken;
+    } catch {
+      await storage.removeItem('accessToken');
+      await storage.removeItem('refreshToken');
+      onAuthFailureCallback?.(); // Desloga o usuário
+      return null;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+const AUTH_BYPASS_ENDPOINTS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/refresh',
+  '/auth/recover',
+  '/auth/logout',
+];
+
+export async function apiFetch<T>(
+  endpoint: string,
+  options: RequestInit = {},
+  isRetry = false,
+): Promise<T> {
   let targetPath = endpoint;
   if (targetPath.startsWith('/api/v1/')) {
     targetPath = targetPath.slice('/api/v1'.length);
@@ -50,6 +130,32 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
     const data = isJson ? await response.json() : null;
 
     if (!response.ok) {
+      const isAuthBypassEndpoint = AUTH_BYPASS_ENDPOINTS.some((bypassPath) =>
+        targetPath.includes(bypassPath),
+      );
+
+      if (response.status === 401 && !isRetry && !isAuthBypassEndpoint) {
+        const currentToken = await storage.getItem('accessToken');
+        let newAccessToken: string | null = null;
+
+        // Se outro refresh concorrente já concluiu enquanto esta requisição estava em voo:
+        if (currentToken && token && currentToken !== token) {
+          newAccessToken = currentToken;
+        } else {
+          newAccessToken = await refreshAuthTokens();
+        }
+
+        if (newAccessToken) {
+          const retryHeaders: Record<string, string> = {
+            ...headers,
+            Authorization: `Bearer ${newAccessToken}`,
+          };
+          delete retryHeaders.authorization;
+
+          return apiFetch<T>(endpoint, { ...options, headers: retryHeaders }, true);
+        }
+      }
+
       const errorMessage =
         data?.message ||
         (data?.errors ? Object.values(data.errors).flat().join(', ') : null) ||
@@ -69,14 +175,19 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
 }
 
 export async function recoverAccountApi(
-  payload: import('../types/auth').RecoverRequest
+  payload: import('../types/auth').RecoverRequest,
 ): Promise<import('../types/auth').ApiSuccessResponse<import('../types/auth').RecoverResponse>> {
-  return apiFetch<import('../types/auth').ApiSuccessResponse<import('../types/auth').RecoverResponse>>(
-    '/auth/recover',
-    {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }
-  );
+  return apiFetch<
+    import('../types/auth').ApiSuccessResponse<import('../types/auth').RecoverResponse>
+  >('/auth/recover', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAccountApi(): Promise<{ status: string; message: string }> {
+  return apiFetch<{ status: string; message: string }>('/account', {
+    method: 'DELETE',
+  });
 }
 

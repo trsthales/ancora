@@ -26,5 +26,19 @@ export const sessions = authSchema.table('sessions', {
   refreshTokenHash: varchar('refresh_token_hash', { length: 255 }).notNull(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  rotatedToSessionId: uuid('rotated_to_session_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const consents = authSchema.table('consents', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  termsVersion: varchar('terms_version', { length: 20 }).notNull(),
+  privacyPolicyVersion: varchar('privacy_policy_version', { length: 20 }).notNull(),
+  healthDataConsent: boolean('health_data_consent').notNull().default(true),
+  consentedAt: timestamp('consented_at', { withTimezone: true }).defaultNow().notNull(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+});
+
