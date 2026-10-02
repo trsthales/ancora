@@ -15,7 +15,6 @@ type UnauthenticatedScreen = 'welcome' | 'login' | 'register';
 
 function MainNavigator() {
   const { isLoading, isAuthenticated, justRegistered } = useAuth();
-  const { openSOS } = useSOS();
   const { theme, colors } = useTheme();
   const [currentScreen, setCurrentScreen] = useState<UnauthenticatedScreen>('welcome');
 
@@ -46,13 +45,12 @@ function MainNavigator() {
   if (isAuthenticated) {
     if (justRegistered) {
       return (
-        <View style={[styles.appContainer, { backgroundColor: colors.background }]}>
+        <View style={styles.flexOne}>
           <StatusBar
             barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
             backgroundColor={colors.background}
           />
           <IdentityRevealScreen />
-          <SOSFloatingButton onPress={openSOS} />
         </View>
       );
     }
@@ -84,12 +82,23 @@ function MainNavigator() {
   }
 
   return (
-    <View style={[styles.appContainer, { backgroundColor: colors.background }]}>
+    <View style={styles.flexOne}>
       <StatusBar
         barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
       {content}
+    </View>
+  );
+}
+
+function AppContent() {
+  const { openSOS } = useSOS();
+  const { colors } = useTheme();
+
+  return (
+    <View style={[styles.appContainer, { backgroundColor: colors.background }]}>
+      <MainNavigator />
       <SOSFloatingButton onPress={openSOS} />
     </View>
   );
@@ -98,11 +107,11 @@ function MainNavigator() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <SOSProvider>
-          <MainNavigator />
-        </SOSProvider>
-      </AuthProvider>
+      <SOSProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </SOSProvider>
     </ThemeProvider>
   );
 }
@@ -147,6 +156,9 @@ const styles = StyleSheet.create({
   appContainer: {
     flex: 1,
     backgroundColor: '#0f172a',
+  },
+  flexOne: {
+    flex: 1,
   },
 });
 

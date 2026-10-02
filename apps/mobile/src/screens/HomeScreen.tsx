@@ -12,14 +12,13 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useSOS } from '../contexts/SOSContext';
 import { useTheme, ThemeColors } from '../contexts/ThemeContext';
-import { SOSFloatingButton } from '../components/SOSFloatingButton';
 import { CheckinCard } from '../components/CheckinCard';
 import { ProgressCard } from '../components/ProgressCard';
 import { AlternativesModal } from '../components/AlternativesModal';
 import { journeyService, Checkin } from '../services/journey';
 
 export const HomeScreen: React.FC = () => {
-  const { user, profile, logout } = useAuth();
+  const { profile, logout } = useAuth();
   const { openSOS } = useSOS();
   const { theme, toggleTheme, colors } = useTheme();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -29,6 +28,7 @@ export const HomeScreen: React.FC = () => {
   const [todayCheckin, setTodayCheckin] = useState<Checkin | null>(null);
   const [totalCheckins, setTotalCheckins] = useState(0);
   const [isLoadingJourney, setIsLoadingJourney] = useState(true);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   // Estado do Motor de Interceptação para fissura alta
   const [isAlternativesOpen, setIsAlternativesOpen] = useState(false);
@@ -52,9 +52,15 @@ export const HomeScreen: React.FC = () => {
           setHasCheckedInToday(todayRes.hasCheckedInToday);
           setTodayCheckin(todayRes.checkin);
           setTotalCheckins(historyRes.totalCheckins);
+          setSyncError(null);
         }
-      } catch {
-        // Falhas transitórias mantêm os estados neutros padrão
+      } catch (err) {
+        console.warn('[HomeScreen] Falha transitória ao sincronizar jornada:', err);
+        if (isMounted) {
+          setSyncError(
+            'Não foi possível sincronizar sua jornada com o servidor no momento. Seus registros locais permanecem preservados.',
+          );
+        }
       } finally {
         if (isMounted) {
           setIsLoadingJourney(false);
@@ -162,6 +168,14 @@ export const HomeScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* Notificação de Sincronização Transitória (VUL-017) */}
+        {syncError && (
+          <View style={styles.syncErrorBanner}>
+            <Text style={styles.syncErrorIcon}>ℹ️</Text>
+            <Text style={styles.syncErrorText}>{syncError}</Text>
+          </View>
+        )}
+
         {/* Card de Progresso Cumulativo Neutro (RFC 002) */}
         <ProgressCard totalCheckins={totalCheckins} isLoading={isLoadingJourney} />
 
@@ -173,7 +187,7 @@ export const HomeScreen: React.FC = () => {
           onCheckinSuccess={handleCheckinSuccess}
         />
 
-        {/* Card SOS Integrado */}
+        {/* Card SOS Integrado (R03) */}
         <View style={styles.sosCard}>
           <View style={styles.sosCardTop}>
             <View style={styles.sosIconContainer}>
@@ -181,12 +195,12 @@ export const HomeScreen: React.FC = () => {
             </View>
             <View style={styles.sosCardHeaderTexts}>
               <Text style={styles.sosCardTitle}>Apoio Imediato • SOS</Text>
-              <Text style={styles.sosCardSub}>Semáforo de Crise 100% Offline</Text>
+              <Text style={styles.sosCardSub}>Semáforo de Crise (Operação Local)</Text>
             </View>
           </View>
           <Text style={styles.sosCardBody}>
-            Em momentos de fissura, ansiedade intensa ou urgência emocional, utilize nossos
-            exercícios guiados e contatos de socorro.
+            Os exercícios de ancoragem e contatos de emergência deste Semáforo operam salvos
+            localmente no seu aparelho.
           </Text>
           <TouchableOpacity
             style={styles.sosButton}
@@ -209,19 +223,15 @@ export const HomeScreen: React.FC = () => {
           </Text>
         </View>
 
-        {/* Compromisso de Anonimato */}
+        {/* Compromisso de Anonimato (Shoulder Surfing Protection) */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Garantia de Anonimato</Text>
           <Text style={styles.cardText}>
-            Nenhuma informação pessoal como e-mail ({user?.email}) ou identificadores reais é
-            compartilhada com outros participantes. Somente seu pseudônimo{' '}
-            <Text style={styles.highlightText}>{formattedPseudonym}</Text> é visível.
+            Sua conta está ativa e protegida. Nenhum identificador civil é compartilhado com a
+            comunidade. Somente seu pseudônimo é visível.
           </Text>
         </View>
       </ScrollView>
-
-      {/* Botão Flutuante SOS permanente */}
-      <SOSFloatingButton onPress={() => openSOS()} />
 
       {/* Motor de Interceptação: Alternativas para este Momento */}
       <AlternativesModal
@@ -444,5 +454,25 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
       color: theme === 'dark' ? '#ffffff' : '#dc2626',
       fontSize: 14,
       fontWeight: 'bold',
+    },
+    syncErrorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      backgroundColor: theme === 'dark' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(245, 158, 11, 0.12)',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(245, 158, 11, 0.4)',
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+    },
+    syncErrorIcon: {
+      fontSize: 16,
+    },
+    syncErrorText: {
+      flex: 1,
+      fontSize: 12,
+      color: theme === 'dark' ? '#fde68a' : '#92400e',
+      lineHeight: 17,
     },
   });

@@ -6,6 +6,7 @@ import { db } from '../db/index.js';
 import { users, profiles, sessions } from '../db/schema/index.js';
 import { hashPassword, verifyPassword } from '../lib/hash.js';
 import { generatePseudonym } from '../lib/pseudonym.js';
+import { deriveAccountToken } from '../lib/crypto-token.js';
 
 export const registerBodySchema = z.object({
   email: z
@@ -123,10 +124,12 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           pseudonym = generatePseudonym();
         }
 
+        const accountToken = deriveAccountToken(createdUser.id);
+
         const [createdProfile] = await tx
           .insert(profiles)
           .values({
-            userId: createdUser.id,
+            accountToken,
             pseudonym,
             avatarId: 'avatar_default',
             persona,
@@ -221,7 +224,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
-    const [profile] = await db.select().from(profiles).where(eq(profiles.userId, user.id)).limit(1);
+    const [profile] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.accountToken, deriveAccountToken(user.id)))
+      .limit(1);
 
     if (!profile) {
       return reply.status(404).send({
@@ -309,7 +316,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         createdAt: profiles.createdAt,
       })
       .from(profiles)
-      .where(eq(profiles.userId, userId))
+      .where(eq(profiles.accountToken, deriveAccountToken(userId)))
       .limit(1);
 
     if (!profile) {
@@ -413,7 +420,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const [profile] = await db
       .select()
       .from(profiles)
-      .where(eq(profiles.userId, session.userId))
+      .where(eq(profiles.accountToken, deriveAccountToken(session.userId)))
       .limit(1);
 
     if (!user || !profile) {

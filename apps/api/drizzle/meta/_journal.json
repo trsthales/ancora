@@ -15,6 +15,13 @@
       "when": 1790874382570,
       "tag": "0001_thin_zombie",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790913519674,
+      "tag": "0002_decouple_account_token_lgpd",
+      "breakpoints": true
     }
   ]
 }

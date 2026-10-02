@@ -179,6 +179,21 @@ export const SOSDashboardModal: React.FC<SOSDashboardModalProps> = ({
                 <Text style={styles.phoneBadge}>DISCAR 188</Text>
               </TouchableOpacity>
 
+              {/* Alternativa de Chat Online do CVV (CLIN-007) */}
+              <TouchableOpacity
+                style={styles.chatButton}
+                onPress={() => Linking.openURL('https://cvv.org.br/chat')}
+                activeOpacity={0.8}
+                accessibilityRole="link"
+                accessibilityLabel="Não pode falar ao telefone agora? Acesse o Chat do CVV pelo site oficial"
+              >
+                <Text style={styles.chatButtonIcon}>💬</Text>
+                <Text style={styles.chatButtonText}>
+                  Não pode falar ao telefone agora? Acesse o Chat do CVV pelo site oficial
+                </Text>
+                <Text style={styles.arrowIcon}>↗</Text>
+              </TouchableOpacity>
+
               {/* Aviso obrigatório de apoio emocional sem caráter médico */}
               <View style={styles.level2Disclaimer}>
                 <Text style={styles.disclaimerIcon}>ℹ️</Text>
@@ -241,11 +256,11 @@ export const SOSDashboardModal: React.FC<SOSDashboardModalProps> = ({
               </TouchableOpacity>
             </View>
 
-            {/* Rodapé Tranquilizador */}
+            {/* Rodapé Tranquilizador (R03) */}
             <View style={styles.footerNote}>
               <Text style={styles.footerNoteText}>
-                ⚓ Este aplicativo opera 100% offline. Todos os recursos acima estão permanentemente
-                salvos em seu dispositivo.
+                ⚓ Os exercícios de ancoragem e contatos de emergência deste Semáforo operam salvos
+                localmente no seu aparelho.
               </Text>
             </View>
           </ScrollView>
@@ -497,6 +512,27 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
       fontSize: 12,
       color: colors.textMuted,
       lineHeight: 16,
+    },
+    chatButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      backgroundColor: theme === 'dark' ? 'rgba(245, 158, 11, 0.08)' : 'rgba(245, 158, 11, 0.06)',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(245, 158, 11, 0.4)',
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+    },
+    chatButtonIcon: {
+      fontSize: 18,
+    },
+    chatButtonText: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme === 'dark' ? '#fbbf24' : '#b45309',
+      lineHeight: 18,
     },
     footerNote: {
       padding: 12,

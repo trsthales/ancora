@@ -15,6 +15,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   JWT_SECRET: z.string().min(32),
   APP_PEPPER_SECRET: z.string().min(32),
+  APP_PEPPER_V1: z.string().min(32).optional(),
 });
 
 const _env = envSchema.safeParse(process.env);

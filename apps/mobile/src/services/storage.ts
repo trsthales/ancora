@@ -12,7 +12,11 @@ export const storage = {
         // Fallback or silently handle web storage quota/permissions error
       }
     } else {
-      await SecureStore.setItemAsync(key, value);
+      try {
+        await SecureStore.setItemAsync(key, value);
+      } catch (error) {
+        console.warn(`[storage] Erro ao gravar item no SecureStore (${key}):`, error);
+      }
     }
   },
 
@@ -27,7 +31,12 @@ export const storage = {
         return null;
       }
     }
-    return await SecureStore.getItemAsync(key);
+    try {
+      return await SecureStore.getItemAsync(key);
+    } catch (error) {
+      console.warn(`[storage] Erro ao recuperar item do SecureStore (${key}):`, error);
+      return null;
+    }
   },
 
   async removeItem(key: string): Promise<void> {
@@ -40,7 +49,11 @@ export const storage = {
         // Fallback or silently handle web storage quota/permissions error
       }
     } else {
-      await SecureStore.deleteItemAsync(key);
+      try {
+        await SecureStore.deleteItemAsync(key);
+      } catch (error) {
+        console.warn(`[storage] Erro ao remover item do SecureStore (${key}):`, error);
+      }
     }
   },
 };
