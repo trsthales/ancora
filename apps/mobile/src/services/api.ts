@@ -67,3 +67,16 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
     throw new ApiError(message, 0);
   }
 }
+
+export async function recoverAccountApi(
+  payload: import('../types/auth').RecoverRequest
+): Promise<import('../types/auth').ApiSuccessResponse<import('../types/auth').RecoverResponse>> {
+  return apiFetch<import('../types/auth').ApiSuccessResponse<import('../types/auth').RecoverResponse>>(
+    '/auth/recover',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }
+  );
+}
+

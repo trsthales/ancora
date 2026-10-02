@@ -6,13 +6,22 @@ import { db } from '../db/index.js';
 import { users, profiles, sessions } from '../db/schema/index.js';
 import { hashPassword, verifyPassword } from '../lib/hash.js';
 import { generatePseudonym } from '../lib/pseudonym.js';
-import { deriveAccountToken } from '../lib/crypto-token.js';
+import {
+  deriveAccountToken,
+  deriveLoginToken,
+  generateRecoveryKey,
+  hashRecoveryKey,
+} from '../lib/crypto-token.js';
+
+const DUMMY_ARGON2_HASH =
+  '$argon2id$v=19$m=65536,p=4,t=3$FTM81xsLNE3c35g2zCioug$iwShqiajdwCymhF/NElrqUSNQAdTwMknCCrvCAcsc/M';
 
 export const registerBodySchema = z.object({
   email: z
     .string()
     .email('E-mail inválido')
-    .transform((val) => val.toLowerCase().trim()),
+    .transform((val) => val.toLowerCase().trim())
+    .optional(),
   password: z.string().min(8, 'A senha deve conter no mínimo 8 caracteres'),
   isAdult: z.literal(true, {
     errorMap: () => ({ message: 'É obrigatório ter 18 anos ou mais para utilizar a plataforma.' }),
@@ -27,14 +36,19 @@ export const registerBodySchema = z.object({
 export type RegisterBodyInput = z.infer<typeof registerBodySchema>;
 
 export const loginBodySchema = z.object({
-  email: z
-    .string()
-    .email('E-mail inválido')
-    .transform((val) => val.toLowerCase().trim()),
+  identifier: z.string().min(1, 'O identificador (pseudônimo) é obrigatório'),
   password: z.string().min(1, 'A senha é obrigatória'),
 });
 
 export type LoginBodyInput = z.infer<typeof loginBodySchema>;
+
+export const recoverBodySchema = z.object({
+  pseudonym: z.string().min(1, 'O pseudônimo é obrigatório'),
+  recoveryKey: z.string().min(1, 'A chave de recuperação é obrigatória'),
+  newPassword: z.string().min(8, 'A nova senha deve conter no mínimo 8 caracteres'),
+});
+
+export type RecoverBodyInput = z.infer<typeof recoverBodySchema>;
 
 export const refreshBodySchema = z.object({
   refreshToken: z.string().min(1, 'O refresh token é obrigatório'),
@@ -75,26 +89,58 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
     try {
       const registrationResult = await db.transaction(async (tx) => {
-        // 1. Checar unicidade do e-mail
-        const [existingUser] = await tx
-          .select({ id: users.id })
-          .from(users)
-          .where(eq(users.email, email))
-          .limit(1);
+        // 1. Checar unicidade do e-mail (caso fornecido)
+        if (email) {
+          const [existingUser] = await tx
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.email, email))
+            .limit(1);
 
-        if (existingUser) {
-          throw new EmailConflictError('E-mail já cadastrado no sistema.');
+          if (existingUser) {
+            throw new EmailConflictError('E-mail já cadastrado no sistema.');
+          }
         }
 
         // 2. Hash da senha com Argon2id
         const passwordHash = await hashPassword(password);
 
-        // 3. Insert em auth_security.users
+        // 3. Gerar Chave Mestra de Recuperação e seu hash
+        const recoveryKey = generateRecoveryKey();
+        const recoveryKeyHash = hashRecoveryKey(recoveryKey);
+
+        // 4. Gerar pseudônimo automático único e loginToken
+        let pseudonym = generatePseudonym();
+        let loginToken = deriveLoginToken(pseudonym);
+
+        for (let attempt = 0; attempt < 5; attempt++) {
+          const [existingProfile] = await tx
+            .select({ id: profiles.id })
+            .from(profiles)
+            .where(eq(profiles.pseudonym, pseudonym))
+            .limit(1);
+
+          const [existingUser] = await tx
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.loginToken, loginToken))
+            .limit(1);
+
+          if (!existingProfile && !existingUser) {
+            break;
+          }
+          pseudonym = generatePseudonym();
+          loginToken = deriveLoginToken(pseudonym);
+        }
+
+        // 5. Insert em auth_security.users
         const [createdUser] = await tx
           .insert(users)
           .values({
-            email,
+            email: email ?? null,
+            loginToken,
             passwordHash,
+            recoveryKeyHash,
             isAdult: true,
             role: 'user',
           })
@@ -109,21 +155,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           throw new Error('Falha ao criar o registro de usuário.');
         }
 
-        // 4. Gerar pseudônimo automático único e insert em recovery_core.profiles
-        let pseudonym = generatePseudonym();
-        for (let attempt = 0; attempt < 5; attempt++) {
-          const [existingProfile] = await tx
-            .select({ id: profiles.id })
-            .from(profiles)
-            .where(eq(profiles.pseudonym, pseudonym))
-            .limit(1);
-
-          if (!existingProfile) {
-            break;
-          }
-          pseudonym = generatePseudonym();
-        }
-
+        // 6. Insert em recovery_core.profiles
         const accountToken = deriveAccountToken(createdUser.id);
 
         const [createdProfile] = await tx
@@ -145,12 +177,36 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           throw new Error('Falha ao criar o registro de perfil.');
         }
 
+        // 7. Emitir tokens JWT na hora (R11)
+        const accessToken = app.jwt.sign(
+          {
+            sub: createdUser.id,
+            profileId: createdProfile.id,
+            role: createdUser.role,
+            persona: createdProfile.persona,
+          },
+          { expiresIn: '15m' },
+        );
+
+        const refreshToken = crypto.randomBytes(32).toString('hex');
+        const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
+
+        await tx.insert(sessions).values({
+          userId: createdUser.id,
+          refreshTokenHash,
+          expiresAt,
+        });
+
         const createdAtFormatted =
           createdUser.createdAt instanceof Date
             ? createdUser.createdAt.toISOString()
             : new Date(createdUser.createdAt).toISOString();
 
         return {
+          accessToken,
+          refreshToken,
+          recoveryKey,
           user: {
             id: createdUser.id,
             email: createdUser.email,
@@ -180,7 +236,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       if (error instanceof EmailConflictError || isUniqueConstraintViolation) {
         return reply.status(409).send({
           status: 'error',
-          message: 'E-mail já cadastrado no sistema.',
+          message: 'E-mail ou identificador já cadastrado no sistema.',
         });
       }
 
@@ -205,11 +261,18 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
-    const { email, password } = parseResult.data;
+    const { identifier, password } = parseResult.data;
+    const loginToken = deriveLoginToken(identifier);
 
-    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.loginToken, loginToken))
+      .limit(1);
 
     if (!user) {
+      // Executa dummy hash do Argon2id (tempo equiparado anti-timing attack)
+      await verifyPassword(DUMMY_ARGON2_HASH, password).catch(() => false);
       return reply.status(401).send({
         status: 'error',
         message: 'Credenciais inválidas.',
@@ -267,6 +330,133 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       data: {
         accessToken,
         refreshToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          createdAt: userCreatedAtFormatted,
+        },
+        profile: {
+          id: profile.id,
+          pseudonym: profile.pseudonym,
+          avatarId: profile.avatarId,
+          persona: profile.persona,
+        },
+      },
+    });
+  });
+
+  // POST /recover
+  app.post('/recover', async (request, reply) => {
+    const parseResult = recoverBodySchema.safeParse(request.body);
+
+    if (!parseResult.success) {
+      const firstMessage = parseResult.error.issues[0]?.message ?? 'Dados de recuperação inválidos.';
+      return reply.status(400).send({
+        status: 'error',
+        message: firstMessage,
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+    }
+
+    const { pseudonym, recoveryKey, newPassword } = parseResult.data;
+    const loginToken = deriveLoginToken(pseudonym);
+
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.loginToken, loginToken))
+      .limit(1);
+
+    if (!user) {
+      // Anti-timing attack dummy hash
+      await verifyPassword(DUMMY_ARGON2_HASH, newPassword).catch(() => false);
+      return reply.status(401).send({
+        status: 'error',
+        message: 'Credenciais de recuperação inválidas.',
+      });
+    }
+
+    const providedKeyHash = hashRecoveryKey(recoveryKey);
+    const isKeyValid =
+      providedKeyHash.length === user.recoveryKeyHash.length &&
+      crypto.timingSafeEqual(Buffer.from(providedKeyHash), Buffer.from(user.recoveryKeyHash));
+
+    if (!isKeyValid) {
+      await verifyPassword(DUMMY_ARGON2_HASH, newPassword).catch(() => false);
+      return reply.status(401).send({
+        status: 'error',
+        message: 'Credenciais de recuperação inválidas.',
+      });
+    }
+
+    const [profile] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.accountToken, deriveAccountToken(user.id)))
+      .limit(1);
+
+    if (!profile) {
+      return reply.status(404).send({
+        status: 'error',
+        message: 'Perfil de usuário não encontrado.',
+      });
+    }
+
+    const newPasswordHash = await hashPassword(newPassword);
+    const newRecoveryKey = generateRecoveryKey();
+    const newRecoveryKeyHash = hashRecoveryKey(newRecoveryKey);
+
+    const accessToken = app.jwt.sign(
+      {
+        sub: user.id,
+        profileId: profile.id,
+        role: user.role,
+        persona: profile.persona,
+      },
+      { expiresIn: '15m' },
+    );
+
+    const refreshToken = crypto.randomBytes(32).toString('hex');
+    const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
+
+    await db.transaction(async (tx) => {
+      // 1. Redefine a senha e a chave de recuperação
+      await tx
+        .update(users)
+        .set({
+          passwordHash: newPasswordHash,
+          recoveryKeyHash: newRecoveryKeyHash,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id));
+
+      // 2. Revoga todas as sessões anteriores
+      await tx
+        .update(sessions)
+        .set({ revokedAt: new Date() })
+        .where(and(eq(sessions.userId, user.id), isNull(sessions.revokedAt)));
+
+      // 3. Insere a nova sessão
+      await tx.insert(sessions).values({
+        userId: user.id,
+        refreshTokenHash,
+        expiresAt,
+      });
+    });
+
+    const userCreatedAtFormatted =
+      user.createdAt instanceof Date
+        ? user.createdAt.toISOString()
+        : new Date(user.createdAt).toISOString();
+
+    return reply.status(200).send({
+      status: 'success',
+      data: {
+        accessToken,
+        refreshToken,
+        recoveryKey: newRecoveryKey,
         user: {
           id: user.id,
           email: user.email,

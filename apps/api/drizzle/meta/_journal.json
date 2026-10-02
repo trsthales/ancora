@@ -22,6 +22,13 @@
       "when": 1790913519674,
       "tag": "0002_decouple_account_token_lgpd",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790917734453,
+      "tag": "0003_add_zero_pii_auth_and_recovery_key",
+      "breakpoints": true
     }
   ]
 }

@@ -15,6 +15,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 
 import { useTheme, ThemeColors } from '../contexts/ThemeContext';
+import { RecoverAccountModal } from './RecoverAccountModal';
 
 interface LoginScreenProps {
   onNavigateToRegister: () => void;
@@ -29,12 +30,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const { theme, colors } = useTheme();
   const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isRecoverModalVisible, setIsRecoverModalVisible] = useState(false);
 
-  const canSubmit = email.trim().length > 0 && password.length > 0 && !isSubmitting;
+  const canSubmit = identifier.trim().length > 0 && password.length > 0 && !isSubmitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -43,7 +45,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setErrorMessage(null);
 
     try {
-      await login(email.trim(), password);
+      await login(identifier.trim(), password);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Credenciais inválidas ou erro ao conectar.';
       setErrorMessage(msg);
@@ -86,18 +88,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           )}
 
           <View style={styles.form}>
-            {/* Campo E-mail */}
+            {/* Campo Pseudônimo */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>E-mail</Text>
+              <Text style={styles.label}>Seu Pseudônimo</Text>
               <TextInput
                 style={styles.input}
-                placeholder="seu.email@exemplo.com"
+                placeholder="@FarolLivre_836"
                 placeholderTextColor={colors.textMuted}
-                keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
-                value={email}
-                onChangeText={setEmail}
+                value={identifier}
+                onChangeText={setIdentifier}
               />
             </View>
 
@@ -135,6 +136,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               )}
             </TouchableOpacity>
 
+            {/* Link para Recuperação por Chave Mestra */}
+            <TouchableOpacity
+              style={styles.forgotPasswordButton}
+              onPress={() => setIsRecoverModalVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.forgotPasswordText}>
+                Esqueceu a senha?{' '}
+                <Text style={styles.forgotPasswordHighlight}>
+                  Recuperar com Chave Mestra
+                </Text>
+              </Text>
+            </TouchableOpacity>
+
             <View style={styles.footerLinkContainer}>
               <Text style={styles.footerText}>Ainda não possui conta?</Text>
               <TouchableOpacity onPress={onNavigateToRegister}>
@@ -144,6 +159,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <RecoverAccountModal
+        visible={isRecoverModalVisible}
+        onClose={() => setIsRecoverModalVisible(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -258,6 +278,19 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
     footerLink: {
       color: colors.primary,
       fontSize: 14,
+      fontWeight: '600',
+    },
+    forgotPasswordButton: {
+      alignItems: 'center',
+      paddingVertical: 10,
+      marginTop: 4,
+    },
+    forgotPasswordText: {
+      color: colors.textMuted,
+      fontSize: 13,
+    },
+    forgotPasswordHighlight: {
+      color: colors.primary,
       fontWeight: '600',
     },
   });

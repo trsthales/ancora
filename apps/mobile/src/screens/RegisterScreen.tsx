@@ -29,7 +29,6 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const { theme, colors } = useTheme();
   const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
 
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [persona, setPersona] = useState<Persona>('navegador');
   const [isAdult, setIsAdult] = useState(false);
@@ -37,8 +36,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const isPasswordValid = password.length >= 8;
-  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  const canSubmit = isAdult && isPasswordValid && isEmailValid && !isSubmitting;
+  const canSubmit = isAdult && isPasswordValid && !isSubmitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -47,7 +45,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     setErrorMessage(null);
 
     try {
-      await register(email.trim(), password, isAdult, persona);
+      await register(password, isAdult, persona);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Não foi possível completar o cadastro.';
       setErrorMessage(msg);
@@ -92,39 +90,6 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           )}
 
           <View style={styles.form}>
-            {/* Campo E-mail */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>E-mail confidencial</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="seu.email@exemplo.com"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                value={email}
-                onChangeText={setEmail}
-              />
-              <Text style={styles.helperText}>Usado estritamente para login e recuperação.</Text>
-            </View>
-
-            {/* Campo Senha */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Senha de proteção</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Mínimo de 8 caracteres"
-                placeholderTextColor={colors.textMuted}
-                secureTextEntry
-                autoCapitalize="none"
-                value={password}
-                onChangeText={setPassword}
-              />
-              {password.length > 0 && !isPasswordValid && (
-                <Text style={styles.warningText}>A senha precisa ter no mínimo 8 caracteres.</Text>
-              )}
-            </View>
-
             {/* Seletor de Trilha (Persona) */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Escolha sua trilha inicial</Text>
@@ -170,6 +135,23 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                   </Text>
                 </TouchableOpacity>
               </View>
+            </View>
+
+            {/* Campo Senha */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Senha de proteção</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Mínimo de 8 caracteres"
+                placeholderTextColor={colors.textMuted}
+                secureTextEntry
+                autoCapitalize="none"
+                value={password}
+                onChangeText={setPassword}
+              />
+              {password.length > 0 && !isPasswordValid && (
+                <Text style={styles.warningText}>A senha precisa ter no mínimo 8 caracteres.</Text>
+              )}
             </View>
 
             {/* Trava Obrigatória 18+ */}
