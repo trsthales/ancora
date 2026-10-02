@@ -7,7 +7,7 @@ import type {
   ApiSuccessResponse,
   Persona,
 } from '../types/auth';
-import { apiFetch, recoverAccountApi } from '../services/api';
+import { apiFetch, recoverAccountApi, setOnAuthFailureCallback } from '../services/api';
 import { storage } from '../services/storage';
 
 interface AuthContextData {
@@ -32,6 +32,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [justRegistered, setJustRegistered] = useState<boolean>(false);
   const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOnAuthFailureCallback(() => {
+      setUser(null);
+      setProfile(null);
+      setRecoveryKey(null);
+      setJustRegistered(false);
+    });
+
+    return () => {
+      setOnAuthFailureCallback(null);
+    };
+  }, []);
 
   useEffect(() => {
     async function restoreSession() {
@@ -78,11 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setJustRegistered(false);
   };
 
-  const register = async (
-    password: string,
-    isAdult: boolean,
-    persona: Persona,
-  ): Promise<void> => {
+  const register = async (password: string, isAdult: boolean, persona: Persona): Promise<void> => {
     const regResponse = await apiFetch<ApiSuccessResponse<RegisterResponse>>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ password, isAdult, persona }),
@@ -190,4 +199,3 @@ export const useAuth = (): AuthContextData => {
   }
   return context;
 };
-
