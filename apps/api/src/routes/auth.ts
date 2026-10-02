@@ -1,9 +1,9 @@
 import crypto from 'node:crypto';
-import type { FastifyPluginAsync } from 'fastify';
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { users, profiles, sessions } from '../db/schema/index.js';
+import { users, profiles, sessions, consents, checkins } from '../db/schema/index.js';
 import { hashPassword, verifyPassword, getDummyHash } from '../lib/hash.js';
 import { generateAvailablePseudonym } from '../lib/pseudonym.js';
 import {
@@ -28,6 +28,14 @@ export const registerBodySchema = z.object({
       errorMap: () => ({ message: "A persona deve ser 'navegador' ou 'apoio'." }),
     })
     .default('navegador'),
+  termsVersion: z.string().default('2026.1'),
+  privacyPolicyVersion: z.string().default('2026.1'),
+  healthDataConsent: z.literal(true, {
+    errorMap: () => ({
+      message:
+        'O consentimento explícito para tratamento de dados de saúde e suporte à recuperação é obrigatório.',
+    }),
+  }),
 });
 
 export type RegisterBodyInput = z.infer<typeof registerBodySchema>;
@@ -82,7 +90,14 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
-    const { email, password, persona } = parseResult.data;
+    const {
+      email,
+      password,
+      persona,
+      termsVersion,
+      privacyPolicyVersion,
+      healthDataConsent,
+    } = parseResult.data;
 
     try {
       const registrationResult = await db.transaction(async (tx) => {
@@ -145,6 +160,14 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         if (!createdUser) {
           throw new Error('Falha ao criar o registro de usuário.');
         }
+
+        // 5.1. Insert em auth_security.consents (Art. 11 LGPD)
+        await tx.insert(consents).values({
+          userId: createdUser.id,
+          termsVersion,
+          privacyPolicyVersion,
+          healthDataConsent,
+        });
 
         // 6. Insert em recovery_core.profiles
         const accountToken = deriveAccountToken(createdUser.id);
@@ -840,4 +863,52 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       message: 'Refresh token ou token de autenticação deve ser fornecido.',
     });
   });
+
+  // DELETE /account (Direito ao Esquecimento - Art. 18, VI da LGPD)
+  app.delete('/account', { preHandler: [app.authenticate] }, deleteAccountHandler);
 };
+
+export const deleteAccountHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+  const userId = request.user.sub;
+  const accountToken = deriveAccountToken(userId);
+
+  try {
+    await db.transaction(async (tx) => {
+      // 1. Buscar o perfil pelo accountToken para obter o profileId
+      const [profile] = await tx
+        .select({ id: profiles.id })
+        .from(profiles)
+        .where(eq(profiles.accountToken, accountToken))
+        .limit(1);
+
+      // 2. Deletar todos os check-ins associados ao profileId em recovery_core.checkins
+      if (profile) {
+        await tx.delete(checkins).where(eq(checkins.profileId, profile.id));
+        // 3. Deletar o perfil em recovery_core.profiles
+        await tx.delete(profiles).where(eq(profiles.id, profile.id));
+      }
+
+      // 4. Deletar todas as sessões em auth_security.sessions para o userId
+      await tx.delete(sessions).where(eq(sessions.userId, userId));
+
+      // 5. Deletar os consentimentos em auth_security.consents
+      await tx.delete(consents).where(eq(consents.userId, userId));
+
+      // 6. Deletar o usuário em auth_security.users
+      await tx.delete(users).where(eq(users.id, userId));
+    });
+
+    return reply.status(200).send({
+      status: 'success',
+      message:
+        'Conta e dados associados foram expurgados definitivamente em conformidade com o Art. 18, VI da LGPD.',
+    });
+  } catch (error: unknown) {
+    request.log.error(error, 'Falha ao processar expurgo de conta (Art. 18, VI LGPD)');
+    return reply.status(500).send({
+      status: 'error',
+      message: 'Erro interno ao processar o expurgo da conta.',
+    });
+  }
+};
+

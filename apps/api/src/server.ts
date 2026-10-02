@@ -10,7 +10,7 @@ import { db } from './db/index.js';
 import { startQueue, stopQueue, isQueueRunning } from './queue/index.js';
 import { loggerConfig } from './lib/logger.js';
 import { initDummyHash } from './lib/hash.js';
-import { authRoutes, profileRoutes, journeyRoutes } from './routes/index.js';
+import { authRoutes, profileRoutes, journeyRoutes, accountRoutes } from './routes/index.js';
 
 export const buildServer = async () => {
   await initDummyHash();
@@ -19,12 +19,16 @@ export const buildServer = async () => {
     logger: loggerConfig,
     genReqId: (req) => {
       const headerReqId = req.headers['x-request-id'];
-      if (typeof headerReqId === 'string' && headerReqId.length > 0) {
+      if (typeof headerReqId === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(headerReqId)) {
         return headerReqId;
       }
       return crypto.randomUUID();
     },
-    requestIdHeader: 'x-request-id',
+    requestIdHeader: false,
+  });
+
+  app.addHook('onSend', async (request, reply) => {
+    reply.header('x-request-id', request.id);
   });
 
   app.setErrorHandler((error: unknown, request, reply) => {
@@ -89,6 +93,10 @@ export const buildServer = async () => {
     prefix: '/api/v1/journey',
   });
 
+  await app.register(accountRoutes, {
+    prefix: '/api/v1/account',
+  });
+
   app.addHook('onClose', async () => {
     await stopQueue();
   });
@@ -124,16 +132,6 @@ export const buildServer = async () => {
 
     return response;
   });
-
-  if (env.NODE_ENV !== 'production') {
-    const testLogHandler = async (request: FastifyRequest, _reply: FastifyReply) => {
-      request.log.info({ body: request.body }, 'Validando mascaramento de dados sensíveis');
-      return { ok: true };
-    };
-
-    app.post('/test-log', testLogHandler);
-    app.post('/api/v1/test-log', testLogHandler);
-  }
 
   return app;
 };

@@ -36,6 +36,13 @@
       "when": 1790920244625,
       "tag": "0004_add_pseudonym_quarantine_and_session_rotation",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790934490841,
+      "tag": "0005_add_lgpd_consents_table",
+      "breakpoints": true
     }
   ]
 }
