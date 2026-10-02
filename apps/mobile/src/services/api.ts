@@ -184,3 +184,10 @@ export async function recoverAccountApi(
     body: JSON.stringify(payload),
   });
 }
+
+export async function deleteAccountApi(): Promise<{ status: string; message: string }> {
+  return apiFetch<{ status: string; message: string }>('/account', {
+    method: 'DELETE',
+  });
+}
+

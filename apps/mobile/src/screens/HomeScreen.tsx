@@ -8,6 +8,8 @@ import {
   ScrollView,
   StatusBar,
   ActivityIndicator,
+  Modal,
+  Alert,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useSOS } from '../contexts/SOSContext';
@@ -18,10 +20,16 @@ import { AlternativesModal } from '../components/AlternativesModal';
 import { journeyService, Checkin } from '../services/journey';
 
 export const HomeScreen: React.FC = () => {
-  const { profile, logout } = useAuth();
+  const { profile, logout, deleteAccount } = useAuth();
   const { openSOS } = useSOS();
   const { theme, toggleTheme, colors } = useTheme();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // Estados para Exclusão Definitiva de Conta (LGPD Art. 18, VI)
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Estados da Jornada Pessoal
   const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
@@ -101,6 +109,23 @@ export const HomeScreen: React.FC = () => {
       await logout();
     } finally {
       setIsLoggingOut(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsDeletingAccount(true);
+    setDeleteError(null);
+    try {
+      await deleteAccount();
+      setIsDeleteModalVisible(false);
+      Alert.alert(
+        'Conta Excluída com Sucesso',
+        'Conta e dados associados foram expurgados definitivamente em conformidade com o Art. 18, VI da LGPD.',
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Falha ao expurgar a conta.';
+      setDeleteError(msg);
+      setIsDeletingAccount(false);
     }
   };
 
@@ -231,6 +256,36 @@ export const HomeScreen: React.FC = () => {
             comunidade. Somente seu pseudônimo é visível.
           </Text>
         </View>
+
+        {/* Seção Governança e Privacidade LGPD */}
+        <View style={styles.governanceCard}>
+          <View style={styles.governanceHeader}>
+            <Text style={styles.governanceIcon}>⚖️</Text>
+            <View style={styles.governanceTitles}>
+              <Text style={styles.governanceTitle}>Governança e Direitos do Titular</Text>
+              <Text style={styles.governanceSub}>LGPD • Lei nº 13.709/2018</Text>
+            </View>
+          </View>
+          <Text style={styles.governanceBody}>
+            Você tem total soberania sobre seus dados pessoais e de saúde. A qualquer momento, você pode
+            exercer seu Direito ao Esquecimento e solicitar o expurgo completo e irreversível da sua conta.
+          </Text>
+          <TouchableOpacity
+            style={styles.deleteAccountButton}
+            onPress={() => {
+              setDeleteStep(1);
+              setDeleteError(null);
+              setIsDeleteModalVisible(true);
+            }}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Excluir Conta e Dados (LGPD Art. 18)"
+          >
+            <Text style={styles.deleteAccountButtonText}>
+              🗑️ Excluir Conta e Dados (LGPD Art. 18)
+            </Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       {/* Motor de Interceptação: Alternativas para este Momento */}
@@ -239,6 +294,115 @@ export const HomeScreen: React.FC = () => {
         onClose={() => setIsAlternativesOpen(false)}
         cravingLevel={interceptedCravingLevel}
       />
+
+      {/* Modal de Confirmação em 2 Etapas de Exclusão Definitiva (LGPD Art. 18, VI) */}
+      <Modal
+        visible={isDeleteModalVisible}
+        animationType="fade"
+        transparent
+        onRequestClose={() => {
+          if (!isDeletingAccount) {
+            setIsDeleteModalVisible(false);
+          }
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.deleteModalContainer}>
+            {deleteStep === 1 ? (
+              <>
+                <View style={styles.deleteModalHeader}>
+                  <View style={styles.warningIconBadge}>
+                    <Text style={styles.warningIconText}>⚠️</Text>
+                  </View>
+                  <Text style={styles.deleteModalTitle}>Excluir Conta e Dados</Text>
+                  <Text style={styles.deleteModalSubtitle}>LGPD Art. 18, VI • Etapa 1 de 2</Text>
+                </View>
+
+                <View style={styles.warningBox}>
+                  <Text style={styles.warningBoxTitle}>Aviso de Irreversibilidade</Text>
+                  <Text style={styles.warningBoxText}>
+                    Esta ação é definitiva. Todos os seus check-ins, dias acumulados e chaves de acesso serão expurgados imediatamente dos nossos servidores.
+                  </Text>
+                </View>
+
+                <View style={styles.impactList}>
+                  <Text style={styles.impactItem}>❌ Seus registros de fissura e humor serão apagados permanentemente.</Text>
+                  <Text style={styles.impactItem}>❌ Seu pseudônimo e perfil serão deletados sem chance de restauração.</Text>
+                  <Text style={styles.impactItem}>❌ Todas as sessões e consentimentos serão revogados e destruídos.</Text>
+                </View>
+
+                <View style={styles.modalActionButtons}>
+                  <TouchableOpacity
+                    style={styles.proceedButton}
+                    onPress={() => setDeleteStep(2)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.proceedButtonText}>Compreendo, prosseguir</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.cancelModalButton}
+                    onPress={() => setIsDeleteModalVisible(false)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.cancelModalButtonText}>Cancelar e Manter Conta</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.deleteModalHeader}>
+                  <View style={[styles.warningIconBadge, { backgroundColor: 'rgba(239, 68, 68, 0.2)' }]}>
+                    <Text style={styles.warningIconText}>🛑</Text>
+                  </View>
+                  <Text style={[styles.deleteModalTitle, { color: '#ef4444' }]}>Confirmação Definitiva</Text>
+                  <Text style={styles.deleteModalSubtitle}>LGPD Art. 18, VI • Etapa 2 de 2</Text>
+                </View>
+
+                {deleteError && (
+                  <View style={styles.deleteErrorBox}>
+                    <Text style={styles.deleteErrorText}>{deleteError}</Text>
+                  </View>
+                )}
+
+                <Text style={styles.confirmPromptText}>
+                  Tem certeza absoluta de que deseja expurgar definitivamente todos os seus dados agora? Não será possível recuperar nenhum histórico.
+                </Text>
+
+                <View style={styles.modalActionButtons}>
+                  <TouchableOpacity
+                    style={[styles.confirmDeleteButton, isDeletingAccount && styles.buttonDisabled]}
+                    onPress={handleConfirmDelete}
+                    disabled={isDeletingAccount}
+                    activeOpacity={0.85}
+                  >
+                    {isDeletingAccount ? (
+                      <ActivityIndicator color="#ffffff" />
+                    ) : (
+                      <Text style={styles.confirmDeleteButtonText}>
+                        Sim, Excluir Definitivamente
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.cancelModalButton}
+                    onPress={() => {
+                      if (!isDeletingAccount) {
+                        setDeleteStep(1);
+                      }
+                    }}
+                    disabled={isDeletingAccount}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.cancelModalButtonText}>Voltar</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -474,5 +638,192 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
       fontSize: 12,
       color: theme === 'dark' ? '#fde68a' : '#92400e',
       lineHeight: 17,
+    },
+    governanceCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      gap: 12,
+      marginTop: 8,
+      marginBottom: 16,
+    },
+    governanceHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    governanceIcon: {
+      fontSize: 22,
+    },
+    governanceTitles: {
+      flex: 1,
+      gap: 2,
+    },
+    governanceTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    governanceSub: {
+      fontSize: 12,
+      color: colors.textMuted,
+      fontWeight: '500',
+    },
+    governanceBody: {
+      fontSize: 13,
+      color: colors.textMuted,
+      lineHeight: 19,
+    },
+    deleteAccountButton: {
+      backgroundColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(239, 68, 68, 0.08)',
+      borderWidth: 1.5,
+      borderColor: 'rgba(239, 68, 68, 0.6)',
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 10,
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    deleteAccountButtonText: {
+      color: '#ef4444',
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.75)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    deleteModalContainer: {
+      backgroundColor: colors.card,
+      borderRadius: 18,
+      padding: 24,
+      width: '100%',
+      maxWidth: 480,
+      borderWidth: 1.5,
+      borderColor: '#ef4444',
+      gap: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.35,
+      shadowRadius: 16,
+      elevation: 10,
+    },
+    deleteModalHeader: {
+      alignItems: 'center',
+      gap: 6,
+    },
+    warningIconBadge: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: 'rgba(245, 158, 11, 0.15)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 4,
+    },
+    warningIconText: {
+      fontSize: 26,
+    },
+    deleteModalTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.text,
+      textAlign: 'center',
+    },
+    deleteModalSubtitle: {
+      fontSize: 12,
+      color: colors.textMuted,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    warningBox: {
+      backgroundColor: 'rgba(239, 68, 68, 0.12)',
+      borderWidth: 1,
+      borderColor: '#ef4444',
+      borderRadius: 10,
+      padding: 14,
+      gap: 6,
+    },
+    warningBoxTitle: {
+      color: '#ef4444',
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    warningBoxText: {
+      color: colors.text,
+      fontSize: 13,
+      lineHeight: 19,
+    },
+    impactList: {
+      gap: 8,
+      paddingVertical: 4,
+    },
+    impactItem: {
+      fontSize: 13,
+      color: colors.textMuted,
+      lineHeight: 18,
+    },
+    confirmPromptText: {
+      fontSize: 14,
+      color: colors.text,
+      lineHeight: 21,
+      textAlign: 'center',
+      paddingVertical: 8,
+    },
+    deleteErrorBox: {
+      backgroundColor: 'rgba(239, 68, 68, 0.15)',
+      borderRadius: 8,
+      padding: 10,
+    },
+    deleteErrorText: {
+      color: '#ef4444',
+      fontSize: 13,
+      textAlign: 'center',
+    },
+    modalActionButtons: {
+      gap: 10,
+      marginTop: 8,
+    },
+    proceedButton: {
+      backgroundColor: '#ef4444',
+      paddingVertical: 14,
+      borderRadius: 10,
+      alignItems: 'center',
+    },
+    proceedButtonText: {
+      color: '#ffffff',
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    confirmDeleteButton: {
+      backgroundColor: '#dc2626',
+      paddingVertical: 14,
+      borderRadius: 10,
+      alignItems: 'center',
+    },
+    confirmDeleteButtonText: {
+      color: '#ffffff',
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    cancelModalButton: {
+      paddingVertical: 12,
+      borderRadius: 10,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    cancelModalButtonText: {
+      color: colors.textMuted,
+      fontSize: 14,
+      fontWeight: '600',
     },
   });

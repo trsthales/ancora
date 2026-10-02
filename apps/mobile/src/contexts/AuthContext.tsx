@@ -7,7 +7,7 @@ import type {
   ApiSuccessResponse,
   Persona,
 } from '../types/auth';
-import { apiFetch, recoverAccountApi, setOnAuthFailureCallback } from '../services/api';
+import { apiFetch, recoverAccountApi, deleteAccountApi, setOnAuthFailureCallback } from '../services/api';
 import { storage } from '../services/storage';
 
 interface AuthContextData {
@@ -18,9 +18,15 @@ interface AuthContextData {
   justRegistered: boolean;
   recoveryKey: string | null;
   login: (identifier: string, password: string) => Promise<void>;
-  register: (password: string, isAdult: boolean, persona: Persona) => Promise<void>;
+  register: (
+    password: string,
+    isAdult: boolean,
+    persona: Persona,
+    healthDataConsent?: boolean,
+  ) => Promise<void>;
   recoverAccount: (pseudonym: string, recoveryKey: string, newPassword: string) => Promise<string>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   acknowledgeIdentity: () => void;
 }
 
@@ -91,10 +97,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setJustRegistered(false);
   };
 
-  const register = async (password: string, isAdult: boolean, persona: Persona): Promise<void> => {
+  const register = async (
+    password: string,
+    isAdult: boolean,
+    persona: Persona,
+    healthDataConsent: boolean = true,
+  ): Promise<void> => {
     const regResponse = await apiFetch<ApiSuccessResponse<RegisterResponse>>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ password, isAdult, persona }),
+      body: JSON.stringify({ password, isAdult, persona, healthDataConsent }),
     });
 
     const {
@@ -167,6 +178,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const deleteAccount = async (): Promise<void> => {
+    try {
+      await deleteAccountApi();
+    } finally {
+      await storage.removeItem('accessToken');
+      await storage.removeItem('refreshToken');
+      setUser(null);
+      setProfile(null);
+      setRecoveryKey(null);
+      setJustRegistered(false);
+    }
+  };
+
   const acknowledgeIdentity = () => {
     setJustRegistered(false);
     setRecoveryKey(null);
@@ -184,6 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       register,
       recoverAccount,
       logout,
+      deleteAccount,
       acknowledgeIdentity,
     }),
     [user, profile, isLoading, justRegistered, recoveryKey],
