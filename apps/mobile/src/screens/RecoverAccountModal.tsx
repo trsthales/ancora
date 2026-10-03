@@ -23,8 +23,9 @@ interface RecoverAccountModalProps {
 
 /**
  * Formata a digitação da Chave Mestra para o padrão canônico Crockford Base32:
- * ANCORA-XXXXX-XXXXX-XXXXX-XXXXX
- * Tolera letras minúsculas, espaços e variações de pontuação.
+ * FIRME-XXXXX-XXXXX-XXXXX-XXXXX
+ * Tolera letras minúsculas, espaços e variações de pontuação, aceitando tanto
+ * o prefixo FIRME quanto o prefixo legado ANCORA.
  */
 export function formatCrockfordKeyInput(input: string): string {
   if (!input) return '';
@@ -33,9 +34,16 @@ export function formatCrockfordKeyInput(input: string): string {
   let val = input.toUpperCase().trim();
   val = val.replace(/\s+/g, '-');
 
-  // Remove o prefixo ANCORA para processar os blocos
+  // Remove o prefixo FIRME ou ANCORA para processar os blocos
   let body = val;
-  if (body.startsWith('ANCORA-')) {
+  if (body.startsWith('FIRME-')) {
+    body = body.slice(6);
+  } else if (body.startsWith('FIRME')) {
+    body = body.slice(5);
+    if (body.startsWith('-')) {
+      body = body.slice(1);
+    }
+  } else if (body.startsWith('ANCORA-')) {
     body = body.slice(7);
   } else if (body.startsWith('ANCORA')) {
     body = body.slice(6);
@@ -48,7 +56,7 @@ export function formatCrockfordKeyInput(input: string): string {
   const cleanBody = body.replace(/[^A-Z0-9]/g, '').slice(0, 20);
 
   if (cleanBody.length === 0) {
-    return val.startsWith('ANCORA') ? 'ANCORA-' : '';
+    return val.startsWith('FIRME') || val.startsWith('ANCORA') ? 'FIRME-' : '';
   }
 
   // Agrupa em blocos de 5 caracteres
@@ -57,7 +65,7 @@ export function formatCrockfordKeyInput(input: string): string {
     blocks.push(cleanBody.slice(i, i + 5));
   }
 
-  return `ANCORA-${blocks.join('-')}`;
+  return `FIRME-${blocks.join('-')}`;
 }
 
 /**
@@ -230,7 +238,7 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
                       <Text style={styles.label}>Chave Mestra de Recuperação</Text>
                       <TextInput
                         style={[styles.input, styles.monoInput]}
-                        placeholder="ANCORA-XXXXX-XXXXX-XXXXX-XXXXX"
+                        placeholder="FIRME-XXXXX-XXXXX-XXXXX-XXXXX"
                         placeholderTextColor={colors.textMuted}
                         autoCapitalize="characters"
                         autoCorrect={false}

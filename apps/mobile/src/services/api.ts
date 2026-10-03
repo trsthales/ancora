@@ -18,6 +18,44 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Realiza fetch com timeout configurável (padrão 15s) utilizando AbortController nativo,
+ * evitando congelamentos da aplicação por conexões zumbis.
+ */
+export async function fetchWithTimeout(
+  url: string,
+  init: RequestInit = {},
+  ms = 15000,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, ms);
+
+  if (init.signal) {
+    if (init.signal.aborted) {
+      controller.abort();
+    } else {
+      init.signal.addEventListener('abort', () => controller.abort());
+    }
+  }
+
+  try {
+    const response = await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
+    return response;
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(`Tempo limite de requisição excedido (${ms / 1000}s).`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
 
@@ -47,16 +85,20 @@ export async function refreshAuthTokens(): Promise<string | null> {
 
       let response: Response;
       try {
-        response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
+        response = await fetchWithTimeout(
+          `${API_BASE_URL}/auth/refresh`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            body: JSON.stringify({ refreshToken: currentRefreshToken }),
           },
-          body: JSON.stringify({ refreshToken: currentRefreshToken }),
-        });
+          15000,
+        );
       } catch {
-        // Erro genérico de rede (ex: TypeError: Network request failed, timeout)
+        // Erro genérico de rede (ex: TypeError: Network request failed, timeout, AbortError)
         // NUNCA apagar tokens por instabilidade de conexão
         return null;
       }
@@ -132,10 +174,14 @@ export async function apiFetch<T>(
   }
 
   try {
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    const response = await fetchWithTimeout(
+      url,
+      {
+        ...options,
+        headers,
+      },
+      15000,
+    );
 
     const isJson = response.headers.get('content-type')?.includes('application/json');
     const data = isJson ? await response.json() : null;
@@ -164,6 +210,16 @@ export async function apiFetch<T>(
           delete retryHeaders.authorization;
 
           return apiFetch<T>(endpoint, { ...options, headers: retryHeaders }, true);
+        }
+
+        // Se o refresh falhou por rede ou timeout (refreshToken ainda existe no storage),
+        // NÃO lançar 401 para evitar que restoreSession ou a UI desloguem o usuário indevidamente.
+        const existingRefreshToken = await storage.getItem('refreshToken');
+        if (existingRefreshToken) {
+          throw new ApiError(
+            'Instabilidade temporária de rede ao renovar sessão. Conexão preservada.',
+            0,
+          );
         }
       }
 
