@@ -100,15 +100,11 @@ export const journeyRoutes: FastifyPluginAsync = async (app) => {
         },
       });
     } catch (error: unknown) {
-      request.log.error(error, 'Falha ao registrar check-in diário');
-      return reply.status(500).send({
-        status: 'error',
-        message: 'Erro interno ao processar check-in diário.',
-      });
+      throw error;
     }
   });
 
-  // GET /today - Consulta o status de check-in do dia atual
+  // GET /today - Consulta o status de check-in do dia atual (fuso America/Sao_Paulo)
   app.get('/today', { preHandler: [app.authenticate] }, async (request, reply) => {
     let profileId = request.user.profileId;
 
@@ -129,13 +125,18 @@ export const journeyRoutes: FastifyPluginAsync = async (app) => {
     }
 
     try {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-
       const [todayCheckin] = await db
         .select()
         .from(checkins)
-        .where(and(eq(checkins.profileId, profileId), gte(checkins.createdAt, todayStart)))
+        .where(
+          and(
+            eq(checkins.profileId, profileId),
+            gte(
+              checkins.createdAt,
+              sql`date_trunc('day', now() at time zone 'America/Sao_Paulo')`,
+            ),
+          ),
+        )
         .orderBy(desc(checkins.createdAt))
         .limit(1);
 
@@ -159,15 +160,11 @@ export const journeyRoutes: FastifyPluginAsync = async (app) => {
         },
       });
     } catch (error: unknown) {
-      request.log.error(error, 'Falha ao consultar check-in do dia atual');
-      return reply.status(500).send({
-        status: 'error',
-        message: 'Erro interno ao consultar check-in do dia.',
-      });
+      throw error;
     }
   });
 
-  // GET /history - Histórico recente de check-ins e total acumulado
+  // GET /history - Histórico recente de check-ins e total acumulado (fuso America/Sao_Paulo)
   app.get('/history', { preHandler: [app.authenticate] }, async (request, reply) => {
     const queryResult = historyQuerySchema.safeParse(request.query ?? {});
 
@@ -211,7 +208,7 @@ export const journeyRoutes: FastifyPluginAsync = async (app) => {
 
       const [countResult] = await db
         .select({
-          count: sql<number>`cast(count(distinct date(created_at)) as integer)`,
+          count: sql<number>`cast(count(distinct date(created_at at time zone 'America/Sao_Paulo')) as integer)`,
         })
         .from(checkins)
         .where(eq(checkins.profileId, profileId));
@@ -236,11 +233,7 @@ export const journeyRoutes: FastifyPluginAsync = async (app) => {
         },
       });
     } catch (error: unknown) {
-      request.log.error(error, 'Falha ao buscar histórico de check-ins');
-      return reply.status(500).send({
-        status: 'error',
-        message: 'Erro interno ao consultar histórico de check-ins.',
-      });
+      throw error;
     }
   });
 };

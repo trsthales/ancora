@@ -3,7 +3,8 @@ import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import fastifyJwt from '@fastify/jwt';
 import fastifyRateLimit from '@fastify/rate-limit';
-import { sql } from 'drizzle-orm';
+import { DrizzleQueryError, sql } from 'drizzle-orm';
+import postgres from 'postgres';
 import { z } from 'zod';
 import { env } from './env.js';
 import { db } from './db/index.js';
@@ -12,10 +13,52 @@ import { loggerConfig } from './lib/logger.js';
 import { initDummyHash } from './lib/hash.js';
 import { authRoutes, profileRoutes, journeyRoutes, accountRoutes } from './routes/index.js';
 
+export function isDatabaseError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const errorObj = err as Record<string, unknown>;
+  const name = typeof errorObj.name === 'string' ? errorObj.name : '';
+  const constructorName = err.constructor?.name ?? '';
+  const hasQueryOrParams = 'query' in errorObj || 'params' in errorObj;
+  const isCauseDbError =
+    errorObj.cause && typeof errorObj.cause === 'object'
+      ? isDatabaseError(errorObj.cause)
+      : false;
+
+  return (
+    err instanceof DrizzleQueryError ||
+    err instanceof postgres.PostgresError ||
+    name === 'DrizzleQueryError' ||
+    name === 'PostgresError' ||
+    constructorName === 'PostgresError' ||
+    constructorName === 'DrizzleQueryError' ||
+    hasQueryOrParams ||
+    isCauseDbError
+  );
+}
+
+export function extractDatabaseErrorInfo(err: unknown): { code?: string; name: string } {
+  const errorObj = (err && typeof err === 'object' ? err : {}) as Record<string, unknown>;
+  const causeObj =
+    errorObj.cause && typeof errorObj.cause === 'object'
+      ? (errorObj.cause as Record<string, unknown>)
+      : {};
+
+  const code =
+    (typeof errorObj.code === 'string' ? errorObj.code : undefined) ||
+    (typeof causeObj.code === 'string' ? causeObj.code : undefined);
+  const name =
+    (typeof errorObj.name === 'string' && errorObj.name ? errorObj.name : undefined) ||
+    (typeof causeObj.name === 'string' && causeObj.name ? causeObj.name : undefined) ||
+    'PostgresError';
+
+  return { code, name };
+}
+
 export const buildServer = async () => {
   await initDummyHash();
 
   const app = Fastify({
+    trustProxy: true,
     logger: loggerConfig,
     genReqId: (req) => {
       const headerReqId = req.headers['x-request-id'];
@@ -37,6 +80,19 @@ export const buildServer = async () => {
         status: 'error',
         message: error.issues[0]?.message || 'Dados inválidos',
         errors: error.flatten().fieldErrors,
+      });
+    }
+
+    if (isDatabaseError(error)) {
+      const { code, name } = extractDatabaseErrorInfo(error);
+      request.log.error({
+        code,
+        name,
+        message: 'Falha na execução da query de banco de dados',
+      });
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Erro interno no servidor',
       });
     }
 

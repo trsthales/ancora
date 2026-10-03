@@ -12,14 +12,37 @@ import {
   generateRecoveryKey,
   hashRecoveryKey,
 } from '../lib/crypto-token.js';
+import {
+  checkAccountLock,
+  recordLoginFailure,
+  recordLoginSuccess,
+} from '../lib/rate-limit.js';
+
+interface CachedRotation {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+}
+
+const recentRotations = new Map<string, CachedRotation>();
+
+function cleanupRotations(): void {
+  const now = Date.now();
+  for (const [sessionId, item] of recentRotations.entries()) {
+    if (now > item.expiresAt) {
+      recentRotations.delete(sessionId);
+    }
+  }
+}
+
+const rotationCleanupInterval = setInterval(cleanupRotations, 30 * 1000);
+rotationCleanupInterval.unref();
 
 export const registerBodySchema = z.object({
-  email: z
+  password: z
     .string()
-    .email('E-mail inválido')
-    .transform((val) => val.toLowerCase().trim())
-    .optional(),
-  password: z.string().min(8, 'A senha deve conter no mínimo 8 caracteres'),
+    .min(8, 'A senha deve conter no mínimo 8 caracteres')
+    .max(128, 'A senha deve conter no máximo 128 caracteres'),
   isAdult: z.literal(true, {
     errorMap: () => ({ message: 'É obrigatório ter 18 anos ou mais para utilizar a plataforma.' }),
   }),
@@ -41,40 +64,54 @@ export const registerBodySchema = z.object({
 export type RegisterBodyInput = z.infer<typeof registerBodySchema>;
 
 export const loginBodySchema = z.object({
-  identifier: z.string().min(1, 'O identificador (pseudônimo) é obrigatório'),
-  password: z.string().min(1, 'A senha é obrigatória'),
+  identifier: z
+    .string()
+    .min(1, 'O identificador (pseudônimo) é obrigatório')
+    .max(50, 'O identificador deve conter no máximo 50 caracteres'),
+  password: z
+    .string()
+    .min(1, 'A senha é obrigatória')
+    .max(128, 'A senha deve conter no máximo 128 caracteres'),
 });
 
 export type LoginBodyInput = z.infer<typeof loginBodySchema>;
 
 export const recoverBodySchema = z.object({
-  pseudonym: z.string().min(1, 'O pseudônimo é obrigatório'),
-  recoveryKey: z.string().min(1, 'A chave de recuperação é obrigatória'),
-  newPassword: z.string().min(8, 'A nova senha deve conter no mínimo 8 caracteres'),
+  pseudonym: z
+    .string()
+    .min(1, 'O pseudônimo é obrigatório')
+    .max(50, 'O pseudônimo deve conter no máximo 50 caracteres'),
+  recoveryKey: z
+    .string()
+    .min(1, 'A chave de recuperação é obrigatória')
+    .max(64, 'A chave de recuperação deve conter no máximo 64 caracteres'),
+  newPassword: z
+    .string()
+    .min(8, 'A nova senha deve conter no mínimo 8 caracteres')
+    .max(128, 'A nova senha deve conter no máximo 128 caracteres'),
 });
 
 export type RecoverBodyInput = z.infer<typeof recoverBodySchema>;
 
 export const refreshBodySchema = z.object({
-  refreshToken: z.string().min(1, 'O refresh token é obrigatório'),
+  refreshToken: z
+    .string()
+    .min(1, 'O refresh token é obrigatório')
+    .max(128, 'O refresh token deve conter no máximo 128 caracteres'),
 });
 
 export type RefreshBodyInput = z.infer<typeof refreshBodySchema>;
 
 export const logoutBodySchema = z
   .object({
-    refreshToken: z.string().optional(),
+    refreshToken: z
+      .string()
+      .max(128, 'O refresh token deve conter no máximo 128 caracteres')
+      .optional(),
   })
   .optional();
 
 export type LogoutBodyInput = z.infer<typeof logoutBodySchema>;
-
-export class EmailConflictError extends Error {
-  constructor(message = 'E-mail já cadastrado no sistema.') {
-    super(message);
-    this.name = 'EmailConflictError';
-  }
-}
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
   // POST /register
@@ -91,7 +128,6 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const {
-      email,
       password,
       persona,
       termsVersion,
@@ -99,29 +135,16 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       healthDataConsent,
     } = parseResult.data;
 
+    // 1. Hash da senha com Argon2id ANTES da transação do banco (~250ms de CPU/RAM fora do pool)
+    const passwordHash = await hashPassword(password);
+
+    // 2. Gerar Chave Mestra Crockford Base32 e seu hash SHA-256 ANTES da transação
+    const recoveryKey = generateRecoveryKey();
+    const recoveryKeyHash = hashRecoveryKey(recoveryKey);
+
     try {
       const registrationResult = await db.transaction(async (tx) => {
-        // 1. Checar unicidade do e-mail (caso fornecido)
-        if (email) {
-          const [existingUser] = await tx
-            .select({ id: users.id })
-            .from(users)
-            .where(eq(users.email, email))
-            .limit(1);
-
-          if (existingUser) {
-            throw new EmailConflictError('E-mail já cadastrado no sistema.');
-          }
-        }
-
-        // 2. Hash da senha com Argon2id
-        const passwordHash = await hashPassword(password);
-
-        // 3. Gerar Chave Mestra de Recuperação e seu hash
-        const recoveryKey = generateRecoveryKey();
-        const recoveryKeyHash = hashRecoveryKey(recoveryKey);
-
-        // 4. Gerar pseudônimo automático único e loginToken
+        // 3. Gerar pseudônimo automático único e loginToken
         let pseudonym = await generateAvailablePseudonym(tx);
         let loginToken = deriveLoginToken(pseudonym);
 
@@ -139,11 +162,10 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           loginToken = deriveLoginToken(pseudonym);
         }
 
-        // 5. Insert em auth_security.users
+        // 4. Insert em auth_security.users (Zero-PII absoluto, sem coluna email)
         const [createdUser] = await tx
           .insert(users)
           .values({
-            email: email ?? null,
             loginToken,
             passwordHash,
             recoveryKeyHash,
@@ -152,7 +174,6 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           })
           .returning({
             id: users.id,
-            email: users.email,
             role: users.role,
             createdAt: users.createdAt,
           });
@@ -161,7 +182,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           throw new Error('Falha ao criar o registro de usuário.');
         }
 
-        // 5.1. Insert em auth_security.consents (Art. 11 LGPD)
+        // 5. Insert em auth_security.consents (Art. 11 LGPD)
         await tx.insert(consents).values({
           userId: createdUser.id,
           termsVersion,
@@ -223,7 +244,6 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           recoveryKey,
           user: {
             id: createdUser.id,
-            email: createdUser.email,
             role: createdUser.role,
             createdAt: createdAtFormatted,
           },
@@ -247,18 +267,14 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         'code' in error &&
         (error as { code?: string }).code === '23505';
 
-      if (error instanceof EmailConflictError || isUniqueConstraintViolation) {
+      if (isUniqueConstraintViolation) {
         return reply.status(409).send({
           status: 'error',
-          message: 'E-mail ou identificador já cadastrado no sistema.',
+          message: 'Identificador já cadastrado no sistema.',
         });
       }
 
-      request.log.error(error, 'Falha ao registrar novo usuário');
-      return reply.status(500).send({
-        status: 'error',
-        message: 'Erro interno ao processar o registro.',
-      });
+      throw error;
     }
   });
 
@@ -268,7 +284,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     {
       config: {
         rateLimit: {
-          max: 5,
+          max: 100,
           timeWindow: 60 * 1000,
         },
       },
@@ -288,6 +304,17 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       const { identifier, password } = parseResult.data;
       const loginToken = deriveLoginToken(identifier);
 
+      // Balde 2: Anti-força bruta por pseudônimo (trava de 5 falhas por 15 min)
+      const lockStatus = checkAccountLock(loginToken);
+      if (lockStatus.isLocked) {
+        reply.header('Retry-After', lockStatus.retryAfterSeconds);
+        return reply.status(429).send({
+          status: 'error',
+          message:
+            'Conta temporariamente bloqueada por excesso de tentativas. Tente novamente em 15 minutos.',
+        });
+      }
+
       const [user] = await db
         .select()
         .from(users)
@@ -295,6 +322,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         .limit(1);
 
       if (!user) {
+        recordLoginFailure(loginToken);
         // Executa dummy hash do Argon2id (tempo equiparado anti-timing attack)
         await verifyPassword(getDummyHash(), password).catch(() => false);
         return reply.status(401).send({
@@ -305,11 +333,14 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
       const isPasswordValid = await verifyPassword(user.passwordHash, password);
       if (!isPasswordValid) {
+        recordLoginFailure(loginToken);
         return reply.status(401).send({
           status: 'error',
           message: 'Credenciais inválidas.',
         });
       }
+
+      recordLoginSuccess(loginToken);
 
       const [profile] = await db
         .select()
@@ -356,7 +387,6 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           refreshToken,
           user: {
             id: user.id,
-            email: user.email,
             role: user.role,
             createdAt: userCreatedAtFormatted,
           },
@@ -494,7 +524,6 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         recoveryKey: newRecoveryKey,
         user: {
           id: user.id,
-          email: user.email,
           role: user.role,
           createdAt: userCreatedAtFormatted,
         },
@@ -515,7 +544,6 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const [user] = await db
       .select({
         id: users.id,
-        email: users.email,
         role: users.role,
         isAdult: users.isAdult,
         createdAt: users.createdAt,
@@ -571,7 +599,6 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       data: {
         user: {
           id: user.id,
-          email: user.email,
           role: user.role,
           isAdult: user.isAdult,
           createdAt: userCreatedAtFormatted,
@@ -629,16 +656,31 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           const elapsedSeconds = (Date.now() - session.revokedAt.getTime()) / 1000;
 
           // Se elapsedSeconds <= 10 e session.rotatedToSessionId !== null:
-          // Trata-se de retry legítimo de rede móvel (4G). Não revogar sessões!
+          // Trata-se de retry legítimo de rede móvel (4G). Não revogar sessões e manter estrita idempotência!
           if (elapsedSeconds <= 10 && session.rotatedToSessionId !== null) {
+            // Idempotência estrita: verificar se os tokens gerados estão no cache em memória
+            const cached = recentRotations.get(session.id);
+            if (cached) {
+              return {
+                statusCode: 200,
+                body: {
+                  status: 'success',
+                  data: {
+                    accessToken: cached.accessToken,
+                    refreshToken: cached.refreshToken,
+                  },
+                },
+              };
+            }
+
+            // Se não estiver no cache em memória, busca sucessora ativa SEM SOBRESCREVER o hash
             const [successorSession] = await tx
               .select()
               .from(sessions)
               .where(eq(sessions.id, session.rotatedToSessionId))
-              .for('update')
               .limit(1);
 
-            if (!successorSession) {
+            if (!successorSession || successorSession.revokedAt !== null) {
               await tx
                 .update(sessions)
                 .set({ revokedAt: new Date() })
@@ -675,19 +717,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
               };
             }
 
-            const retryRefreshToken = crypto.randomBytes(32).toString('hex');
-            const retryRefreshTokenHash = crypto.createHash('sha256').update(retryRefreshToken).digest('hex');
-            const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
-
-            await tx
-              .update(sessions)
-              .set({
-                refreshTokenHash: retryRefreshTokenHash,
-                expiresAt: newExpiresAt,
-              })
-              .where(eq(sessions.id, successorSession.id));
-
-            const retryAccessToken = app.jwt.sign(
+            const activeAccessToken = app.jwt.sign(
               {
                 sub: user.id,
                 profileId: profile.id,
@@ -702,8 +732,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
               body: {
                 status: 'success',
                 data: {
-                  accessToken: retryAccessToken,
-                  refreshToken: retryRefreshToken,
+                  accessToken: activeAccessToken,
                 },
               },
             };
@@ -796,6 +825,12 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           { expiresIn: '15m' },
         );
 
+        recentRotations.set(session.id, {
+          accessToken: newAccessToken,
+          refreshToken: newRefreshToken,
+          expiresAt: Date.now() + 15 * 1000,
+        });
+
         return {
           statusCode: 200,
           body: {
@@ -810,11 +845,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
       return reply.status(result.statusCode).send(result.body);
     } catch (error: unknown) {
-      request.log.error(error, 'Erro ao processar refresh token');
-      return reply.status(500).send({
-        status: 'error',
-        message: 'Erro interno ao processar refresh token.',
-      });
+      throw error;
     }
   });
 
@@ -904,11 +935,7 @@ export const deleteAccountHandler = async (request: FastifyRequest, reply: Fasti
         'Conta e dados associados foram expurgados definitivamente em conformidade com o Art. 18, VI da LGPD.',
     });
   } catch (error: unknown) {
-    request.log.error(error, 'Falha ao processar expurgo de conta (Art. 18, VI LGPD)');
-    return reply.status(500).send({
-      status: 'error',
-      message: 'Erro interno ao processar o expurgo da conta.',
-    });
+    throw error;
   }
 };
 

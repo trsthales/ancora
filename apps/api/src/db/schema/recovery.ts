@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { index, integer, pgSchema, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 
 export const recoverySchema = pgSchema('recovery_core');
@@ -11,7 +12,9 @@ export const profiles = recoverySchema.table(
     avatarId: varchar('avatar_id', { length: 50 }).notNull().default('avatar_default'),
     persona: varchar('persona', { length: 20 }).notNull(),
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).defaultNow().notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .default(sql`date_trunc('day', now())`)
+      .notNull(),
   },
   (table) => [
     index('idx_profiles_account_token').on(table.accountToken),
