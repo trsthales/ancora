@@ -56,10 +56,11 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         ? profile.createdAt.toISOString()
         : new Date(profile.createdAt).toISOString();
 
-    const lastSeenAtFormatted =
-      profile.lastSeenAt instanceof Date
+    const lastSeenAtFormatted = profile.lastSeenAt
+      ? profile.lastSeenAt instanceof Date
         ? profile.lastSeenAt.toISOString()
-        : new Date(profile.lastSeenAt).toISOString();
+        : new Date(profile.lastSeenAt).toISOString()
+      : null;
 
     return reply.status(200).send({
       status: 'success',

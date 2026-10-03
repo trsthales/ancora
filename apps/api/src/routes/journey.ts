@@ -29,6 +29,16 @@ export const historyQuerySchema = z.object({
 
 export type HistoryQueryInput = z.infer<typeof historyQuerySchema>;
 
+async function resolveProfileId(userId: string): Promise<string | null> {
+  const accountToken = deriveAccountToken(userId);
+  const [profile] = await db
+    .select({ id: profiles.id })
+    .from(profiles)
+    .where(eq(profiles.accountToken, accountToken))
+    .limit(1);
+  return profile ? profile.id : null;
+}
+
 export const journeyRoutes: FastifyPluginAsync = async (app) => {
   // POST /checkin - Registra um novo check-in diário
   app.post('/checkin', { preHandler: [app.authenticate] }, async (request, reply) => {
@@ -43,22 +53,13 @@ export const journeyRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
-    let profileId = request.user.profileId;
+    const profileId = await resolveProfileId(request.user.sub);
 
     if (!profileId) {
-      const [profile] = await db
-        .select({ id: profiles.id })
-        .from(profiles)
-        .where(eq(profiles.accountToken, deriveAccountToken(request.user.sub)))
-        .limit(1);
-
-      if (!profile) {
-        return reply.status(404).send({
-          status: 'error',
-          message: 'Perfil de usuário não encontrado.',
-        });
-      }
-      profileId = profile.id;
+      return reply.status(404).send({
+        status: 'error',
+        message: 'Perfil de usuário não encontrado.',
+      });
     }
 
     const { cravingLevel, mood } = parseResult.data;
@@ -106,22 +107,13 @@ export const journeyRoutes: FastifyPluginAsync = async (app) => {
 
   // GET /today - Consulta o status de check-in do dia atual (fuso America/Sao_Paulo)
   app.get('/today', { preHandler: [app.authenticate] }, async (request, reply) => {
-    let profileId = request.user.profileId;
+    const profileId = await resolveProfileId(request.user.sub);
 
     if (!profileId) {
-      const [profile] = await db
-        .select({ id: profiles.id })
-        .from(profiles)
-        .where(eq(profiles.accountToken, deriveAccountToken(request.user.sub)))
-        .limit(1);
-
-      if (!profile) {
-        return reply.status(404).send({
-          status: 'error',
-          message: 'Perfil de usuário não encontrado.',
-        });
-      }
-      profileId = profile.id;
+      return reply.status(404).send({
+        status: 'error',
+        message: 'Perfil de usuário não encontrado.',
+      });
     }
 
     try {
@@ -133,7 +125,7 @@ export const journeyRoutes: FastifyPluginAsync = async (app) => {
             eq(checkins.profileId, profileId),
             gte(
               checkins.createdAt,
-              sql`date_trunc('day', now() at time zone 'America/Sao_Paulo')`,
+              sql`(date_trunc('day', now() AT TIME ZONE 'America/Sao_Paulo')) AT TIME ZONE 'America/Sao_Paulo'`,
             ),
           ),
         )
@@ -179,23 +171,13 @@ export const journeyRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const { limit } = queryResult.data;
-
-    let profileId = request.user.profileId;
+    const profileId = await resolveProfileId(request.user.sub);
 
     if (!profileId) {
-      const [profile] = await db
-        .select({ id: profiles.id })
-        .from(profiles)
-        .where(eq(profiles.accountToken, deriveAccountToken(request.user.sub)))
-        .limit(1);
-
-      if (!profile) {
-        return reply.status(404).send({
-          status: 'error',
-          message: 'Perfil de usuário não encontrado.',
-        });
-      }
-      profileId = profile.id;
+      return reply.status(404).send({
+        status: 'error',
+        message: 'Perfil de usuário não encontrado.',
+      });
     }
 
     try {

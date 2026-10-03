@@ -65,23 +65,35 @@ export const loggerConfig: FastifyServerOptions['logger'] = {
     err: (err: any) => {
       const errorObj = err && typeof err === 'object' ? err : {};
       const name = String(errorObj.name || 'Error');
+      const constructorName = err?.constructor?.name ?? '';
+      const causeObj =
+        errorObj.cause && typeof errorObj.cause === 'object'
+          ? (errorObj.cause as Record<string, unknown>)
+          : undefined;
+
       const isDb =
         name === 'DrizzleQueryError' ||
         name === 'PostgresError' ||
+        constructorName === 'PostgresError' ||
+        constructorName === 'DrizzleQueryError' ||
         'query' in errorObj ||
-        'params' in errorObj;
+        'params' in errorObj ||
+        Boolean(
+          causeObj &&
+            ('query' in causeObj ||
+              'params' in causeObj ||
+              causeObj.name === 'PostgresError' ||
+              causeObj.name === 'DrizzleQueryError'),
+        );
 
       if (isDb) {
-        const causeObj =
-          errorObj.cause && typeof errorObj.cause === 'object'
-            ? (errorObj.cause as Record<string, unknown>)
-            : undefined;
+        const code = (errorObj.code || causeObj?.code) as string | undefined;
+        const finalName =
+          name === 'Error' ? ((causeObj?.name as string) || 'PostgresError') : name;
         return {
-          type: name,
-          name,
-          code: (errorObj.code || causeObj?.code) as string,
+          code,
+          name: finalName,
           message: 'Falha na execução da query de banco de dados',
-          stack: '',
         };
       }
 

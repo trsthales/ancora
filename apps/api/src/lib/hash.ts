@@ -17,7 +17,7 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 /**
- * Verifies a password against an Argon2 hash with pepper, falling back to non-peppered verification.
+ * Verifies a password against an Argon2 hash with pepper.
  */
 export async function verifyPassword(hash: string, password: string): Promise<boolean> {
   if (!hash) {
@@ -27,18 +27,9 @@ export async function verifyPassword(hash: string, password: string): Promise<bo
   const pepper = env.APP_PEPPER_V1 || env.APP_PEPPER_SECRET;
 
   try {
-    const isValid = await argon2.verify(hash, password, {
+    return await argon2.verify(hash, password, {
       secret: Buffer.from(pepper),
     });
-    if (isValid) {
-      return true;
-    }
-  } catch {
-    // Ignorar e tentar fallback legado se falhar
-  }
-
-  try {
-    return await argon2.verify(hash, password);
   } catch {
     return false;
   }
