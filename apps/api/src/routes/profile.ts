@@ -180,11 +180,7 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         },
       });
     } catch (error: unknown) {
-      request.log.error(error, 'Falha ao rotacionar identidade comunitária');
-      return reply.status(500).send({
-        status: 'error',
-        message: 'Erro interno ao processar renovação de identidade.',
-      });
+      throw error;
     }
   });
 };

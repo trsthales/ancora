@@ -7,8 +7,16 @@ import type {
   ApiSuccessResponse,
   Persona,
 } from '../types/auth';
-import { apiFetch, recoverAccountApi, deleteAccountApi, setOnAuthFailureCallback } from '../services/api';
+import { apiFetch, recoverAccountApi, deleteAccountApi, setOnAuthFailureCallback, ApiError } from '../services/api';
 import { storage } from '../services/storage';
+
+interface PendingRecoverySession {
+  user: User;
+  profile: Profile;
+  accessToken: string;
+  refreshToken: string;
+  recoveryKey: string;
+}
 
 interface AuthContextData {
   user: User | null;
@@ -25,6 +33,7 @@ interface AuthContextData {
     healthDataConsent?: boolean,
   ) => Promise<void>;
   recoverAccount: (pseudonym: string, recoveryKey: string, newPassword: string) => Promise<string>;
+  completeAccountRecovery: () => Promise<void>;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   acknowledgeIdentity: () => void;
@@ -38,6 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [justRegistered, setJustRegistered] = useState<boolean>(false);
   const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
+  const [pendingRecovery, setPendingRecovery] = useState<PendingRecoverySession | null>(null);
 
   useEffect(() => {
     setOnAuthFailureCallback(() => {
@@ -45,6 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(null);
       setRecoveryKey(null);
       setJustRegistered(false);
+      setPendingRecovery(null);
     });
 
     return () => {
@@ -61,18 +72,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
+        // Tenta restaurar do cache local caso offline
+        const cachedUserStr = await storage.getItem('cachedUser');
+        const cachedProfileStr = await storage.getItem('cachedProfile');
+        if (cachedUserStr && cachedProfileStr) {
+          try {
+            setUser(JSON.parse(cachedUserStr));
+            setProfile(JSON.parse(cachedProfileStr));
+          } catch {
+            // Ignora falhas de parse de dados antigos
+          }
+        }
+
         const response =
           await apiFetch<ApiSuccessResponse<{ user: User; profile: Profile }>>('/auth/me');
         if (response?.data?.user && response?.data?.profile) {
           setUser(response.data.user);
           setProfile(response.data.profile);
-        } else {
+          await storage.setItem('cachedUser', JSON.stringify(response.data.user));
+          await storage.setItem('cachedProfile', JSON.stringify(response.data.profile));
+        }
+      } catch (error) {
+        // Limpar storage estritamente em caso de HTTP 401 explícito da API
+        if (error instanceof ApiError && error.status === 401) {
           await storage.removeItem('accessToken');
           await storage.removeItem('refreshToken');
+          await storage.removeItem('cachedUser');
+          await storage.removeItem('cachedProfile');
+          setUser(null);
+          setProfile(null);
         }
-      } catch {
-        await storage.removeItem('accessToken');
-        await storage.removeItem('refreshToken');
+        // Se for erro genérico de rede (status 0) ou erro 5xx do servidor,
+        // NUNCA apagar tokens do storage!
       } finally {
         setIsLoading(false);
       }
@@ -90,11 +121,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { accessToken, refreshToken, user: loggedUser, profile: loggedProfile } = response.data;
     await storage.setItem('accessToken', accessToken);
     await storage.setItem('refreshToken', refreshToken);
+    await storage.setItem('cachedUser', JSON.stringify(loggedUser));
+    await storage.setItem('cachedProfile', JSON.stringify(loggedProfile));
 
     setUser(loggedUser);
     setProfile(loggedProfile);
     setRecoveryKey(null);
     setJustRegistered(false);
+    setPendingRecovery(null);
   };
 
   const register = async (
@@ -122,11 +156,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (refreshToken) {
       await storage.setItem('refreshToken', refreshToken);
     }
+    await storage.setItem('cachedUser', JSON.stringify(registeredUser));
+    await storage.setItem('cachedProfile', JSON.stringify(registeredProfile));
 
     setUser(registeredUser);
     setProfile(registeredProfile);
     setRecoveryKey(returnedRecoveryKey || null);
     setJustRegistered(true);
+    setPendingRecovery(null);
   };
 
   const recoverAccount = async (
@@ -148,15 +185,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       profile: recoveredProfile,
     } = response.data;
 
+    // Retém os dados da sessão em estado pendente sem ativar imediatamente,
+    // evitando a desmontagem prematura do modal antes do usuário visualizar e salvar a chave
+    setPendingRecovery({
+      user: recoveredUser,
+      profile: recoveredProfile,
+      accessToken,
+      refreshToken,
+      recoveryKey: newRecoveryKey,
+    });
+
+    return newRecoveryKey;
+  };
+
+  const completeAccountRecovery = async (): Promise<void> => {
+    if (!pendingRecovery) {
+      return;
+    }
+
+    const {
+      accessToken,
+      refreshToken,
+      user: recoveredUser,
+      profile: recoveredProfile,
+      recoveryKey: newRecoveryKey,
+    } = pendingRecovery;
+
     await storage.setItem('accessToken', accessToken);
     await storage.setItem('refreshToken', refreshToken);
+    await storage.setItem('cachedUser', JSON.stringify(recoveredUser));
+    await storage.setItem('cachedProfile', JSON.stringify(recoveredProfile));
 
     setUser(recoveredUser);
     setProfile(recoveredProfile);
     setRecoveryKey(newRecoveryKey);
     setJustRegistered(false);
-
-    return newRecoveryKey;
+    setPendingRecovery(null);
   };
 
   const logout = async (): Promise<void> => {
@@ -171,10 +235,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       await storage.removeItem('accessToken');
       await storage.removeItem('refreshToken');
+      await storage.removeItem('cachedUser');
+      await storage.removeItem('cachedProfile');
       setUser(null);
       setProfile(null);
       setRecoveryKey(null);
       setJustRegistered(false);
+      setPendingRecovery(null);
     }
   };
 
@@ -184,10 +251,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       await storage.removeItem('accessToken');
       await storage.removeItem('refreshToken');
+      await storage.removeItem('cachedUser');
+      await storage.removeItem('cachedProfile');
       setUser(null);
       setProfile(null);
       setRecoveryKey(null);
       setJustRegistered(false);
+      setPendingRecovery(null);
     }
   };
 
@@ -207,11 +277,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       login,
       register,
       recoverAccount,
+      completeAccountRecovery,
       logout,
       deleteAccount,
       acknowledgeIdentity,
     }),
-    [user, profile, isLoading, justRegistered, recoveryKey],
+    [user, profile, isLoading, justRegistered, recoveryKey, pendingRecovery],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

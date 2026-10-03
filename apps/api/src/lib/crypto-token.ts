@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { env } from '../env.js';
 
-const RECOVERY_KEY_CHARSET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+export const CROCKFORD_BASE32_CHARSET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
 export function deriveAccountToken(userId: string): string {
   const pepper = env.APP_PEPPER_V1 || env.APP_PEPPER_SECRET;
@@ -24,29 +24,48 @@ export function deriveLoginToken(pseudonym: string): string {
 }
 
 /**
- * Gera chave criptograficamente segura no formato ANCORA-XXXX-XXXX-XXXX
- * (12 caracteres alfanuméricos aleatórios em caixa alta, agrupados em 3 blocos de 4 caracteres por hífens).
+ * Normaliza a chave de recuperação tornando a digitação tolerante a erros humanos:
+ * 1. Converte para maiúsculas e remove espaços das extremidades.
+ * 2. Remove o prefixo ANCORA opcional se presente.
+ * 3. Remove espaços e hífens internos.
+ * 4. Mapeia caracteres ambíguos: 'O' -> '0', 'I'/'L' -> '1'.
  */
-export function generateRecoveryKey(): string {
-  let chars = '';
-  for (let i = 0; i < 12; i++) {
-    const randomIndex = crypto.randomInt(0, RECOVERY_KEY_CHARSET.length);
-    chars += RECOVERY_KEY_CHARSET[randomIndex];
+export function normalizeRecoveryKey(key: string): string {
+  let normalized = key.trim().toUpperCase();
+  if (normalized.startsWith('ANCORA')) {
+    normalized = normalized.slice(6);
   }
-  const block1 = chars.slice(0, 4);
-  const block2 = chars.slice(4, 8);
-  const block3 = chars.slice(8, 12);
-  return `ANCORA-${block1}-${block2}-${block3}`;
+  normalized = normalized.replace(/[\s-]+/g, '');
+  normalized = normalized.replace(/O/g, '0').replace(/[IL]/g, '1');
+  return normalized;
 }
 
 /**
- * Retorna hash SHA-256 da chave de recuperação normalizada (uppercase e trim).
+ * Gera Chave Mestra criptograficamente segura com 20 caracteres do alfabeto Crockford Base32
+ * no formato ANCORA-XXXXX-XXXXX-XXXXX-XXXXX (4 blocos de 5 caracteres).
+ */
+export function generateRecoveryKey(): string {
+  let chars = '';
+  for (let i = 0; i < 20; i++) {
+    const randomIndex = crypto.randomInt(0, CROCKFORD_BASE32_CHARSET.length);
+    chars += CROCKFORD_BASE32_CHARSET[randomIndex];
+  }
+  const block1 = chars.slice(0, 5);
+  const block2 = chars.slice(5, 10);
+  const block3 = chars.slice(10, 15);
+  const block4 = chars.slice(15, 20);
+  return `ANCORA-${block1}-${block2}-${block3}-${block4}`;
+}
+
+/**
+ * Retorna hash SHA-256 da chave de recuperação após normalização tolerante a erros humanos.
  */
 export function hashRecoveryKey(key: string): string {
-  const normalized = key.trim().toUpperCase();
+  const normalized = normalizeRecoveryKey(key);
   return crypto
     .createHash('sha256')
     .update(normalized)
     .digest('hex');
 }
+
 

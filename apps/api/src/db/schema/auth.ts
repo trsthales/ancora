@@ -6,7 +6,6 @@ export const users = authSchema.table(
   'users',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    email: varchar('email', { length: 255 }).unique(),
     loginToken: varchar('login_token', { length: 64 }).notNull().unique(),
     passwordHash: varchar('password_hash', { length: 255 }).notNull(),
     recoveryKeyHash: varchar('recovery_key_hash', { length: 64 }).notNull(),

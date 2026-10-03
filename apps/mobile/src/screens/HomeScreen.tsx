@@ -210,6 +210,10 @@ export const HomeScreen: React.FC = () => {
           todayCheckin={todayCheckin}
           isLoadingInitial={isLoadingJourney}
           onCheckinSuccess={handleCheckinSuccess}
+          onHighCravingIntercept={(level) => {
+            setInterceptedCravingLevel(level);
+            setIsAlternativesOpen(true);
+          }}
         />
 
         {/* Card SOS Integrado (R03) */}

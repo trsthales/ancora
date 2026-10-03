@@ -21,8 +21,55 @@ interface RecoverAccountModalProps {
   onClose: () => void;
 }
 
+/**
+ * Formata a digitação da Chave Mestra para o padrão canônico Crockford Base32:
+ * ANCORA-XXXXX-XXXXX-XXXXX-XXXXX
+ * Tolera letras minúsculas, espaços e variações de pontuação.
+ */
+export function formatCrockfordKeyInput(input: string): string {
+  if (!input) return '';
+
+  // Converte para maiúsculas e normaliza espaços
+  let val = input.toUpperCase().trim();
+  val = val.replace(/\s+/g, '-');
+
+  // Remove o prefixo ANCORA para processar os blocos
+  let body = val;
+  if (body.startsWith('ANCORA-')) {
+    body = body.slice(7);
+  } else if (body.startsWith('ANCORA')) {
+    body = body.slice(6);
+    if (body.startsWith('-')) {
+      body = body.slice(1);
+    }
+  }
+
+  // Permite apenas caracteres alfanuméricos válidos, limitando a 20 caracteres
+  const cleanBody = body.replace(/[^A-Z0-9]/g, '').slice(0, 20);
+
+  if (cleanBody.length === 0) {
+    return val.startsWith('ANCORA') ? 'ANCORA-' : '';
+  }
+
+  // Agrupa em blocos de 5 caracteres
+  const blocks: string[] = [];
+  for (let i = 0; i < cleanBody.length; i += 5) {
+    blocks.push(cleanBody.slice(i, i + 5));
+  }
+
+  return `ANCORA-${blocks.join('-')}`;
+}
+
+/**
+ * Garante que uma chave completa seja exibida no formato canônico Crockford Base32
+ */
+export function formatCanonicalKey(key: string): string {
+  if (!key) return '';
+  return formatCrockfordKeyInput(key);
+}
+
 export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visible, onClose }) => {
-  const { recoverAccount } = useAuth();
+  const { recoverAccount, completeAccountRecovery } = useAuth();
   const { theme, colors } = useTheme();
   const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
 
@@ -30,6 +77,7 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
   const [recoveryKey, setRecoveryKey] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isActivatingSession, setIsActivatingSession] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Estado da chave rotacionada obtida com sucesso
@@ -38,7 +86,7 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
 
   const isFormValid =
     pseudonym.trim().length > 0 &&
-    recoveryKey.trim().length > 0 &&
+    recoveryKey.trim().length >= 10 &&
     newPassword.length >= 8 &&
     !isSubmitting;
 
@@ -49,7 +97,17 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
     setErrorMessage(null);
     setNewRotatedKey(null);
     setHasCopied(false);
+    setIsActivatingSession(false);
     onClose();
+  };
+
+  const handleKeyChange = (text: string) => {
+    if (!text.trim()) {
+      setRecoveryKey('');
+      return;
+    }
+    const formatted = formatCrockfordKeyInput(text);
+    setRecoveryKey(formatted);
   };
 
   const handleRecover = async () => {
@@ -63,7 +121,7 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
       const formattedKey = recoveryKey.trim();
 
       const rotatedKey = await recoverAccount(formattedPseudonym, formattedKey, newPassword);
-      setNewRotatedKey(rotatedKey);
+      setNewRotatedKey(formatCanonicalKey(rotatedKey));
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : 'Falha ao recuperar conta. Verifique os dados.';
@@ -75,19 +133,20 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
 
   const handleCopyNewKey = async () => {
     if (!newRotatedKey) return;
+    const keyToCopy = formatCanonicalKey(newRotatedKey);
 
     try {
       if (Clipboard && typeof Clipboard.setStringAsync === 'function') {
-        await Clipboard.setStringAsync(newRotatedKey);
+        await Clipboard.setStringAsync(keyToCopy);
       } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(newRotatedKey);
+        await navigator.clipboard.writeText(keyToCopy);
       }
       setHasCopied(true);
       setTimeout(() => setHasCopied(false), 2500);
     } catch {
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
         try {
-          await navigator.clipboard.writeText(newRotatedKey);
+          await navigator.clipboard.writeText(keyToCopy);
           setHasCopied(true);
           setTimeout(() => setHasCopied(false), 2500);
           return;
@@ -95,7 +154,20 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
           // Fallback
         }
       }
-      Alert.alert('Nova Chave de Recuperação', newRotatedKey);
+      Alert.alert('Nova Chave de Recuperação', keyToCopy);
+    }
+  };
+
+  const handleConfirmAndEnter = async () => {
+    setIsActivatingSession(true);
+    setErrorMessage(null);
+    try {
+      await completeAccountRecovery();
+      handleResetAndClose();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Falha ao ativar sessão.';
+      setErrorMessage(msg);
+      setIsActivatingSession(false);
     }
   };
 
@@ -104,7 +176,12 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={handleResetAndClose}
+      onRequestClose={() => {
+        // Bloqueia fechamento involuntário durante a visualização da chave rotacionada
+        if (!newRotatedKey) {
+          handleResetAndClose();
+        }
+      }}
     >
       <View style={styles.overlay}>
         <KeyboardAvoidingView
@@ -153,12 +230,12 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
                       <Text style={styles.label}>Chave Mestra de Recuperação</Text>
                       <TextInput
                         style={[styles.input, styles.monoInput]}
-                        placeholder="ANCORA-XXXX-XXXX-XXXX"
+                        placeholder="ANCORA-XXXXX-XXXXX-XXXXX-XXXXX"
                         placeholderTextColor={colors.textMuted}
                         autoCapitalize="characters"
                         autoCorrect={false}
                         value={recoveryKey}
-                        onChangeText={setRecoveryKey}
+                        onChangeText={handleKeyChange}
                       />
                     </View>
 
@@ -210,7 +287,7 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
                   </View>
                 </>
               ) : (
-                // FASE 2: Exibição da Nova Chave Rotacionada
+                // FASE 2: Exibição e Confirmação Mandatória da Nova Chave Rotacionada
                 <View style={styles.successPhase}>
                   <View style={styles.successBadge}>
                     <Text style={styles.successBadgeText}>Senha Redefinida com Sucesso</Text>
@@ -219,13 +296,19 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
                   <Text style={styles.successTitle}>Sua Nova Chave Mestra</Text>
                   <Text style={styles.successDesc}>
                     Por motivos de segurança, a sua chave anterior foi invalidada. Salve a sua nova
-                    chave agora mesmo.
+                    chave agora mesmo no padrão seguro Crockford Base32.
                   </Text>
+
+                  {errorMessage && (
+                    <View style={styles.errorBox}>
+                      <Text style={styles.errorText}>{errorMessage}</Text>
+                    </View>
+                  )}
 
                   <View style={styles.newKeyCard}>
                     <View style={styles.keyContainer}>
                       <Text style={styles.keyText} selectable>
-                        {newRotatedKey}
+                        {formatCanonicalKey(newRotatedKey)}
                       </Text>
                     </View>
 
@@ -252,10 +335,17 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
 
                   <TouchableOpacity
                     style={styles.submitButton}
-                    onPress={handleResetAndClose}
+                    onPress={handleConfirmAndEnter}
+                    disabled={isActivatingSession}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.submitButtonText}>Acessar Minha Conta</Text>
+                    {isActivatingSession ? (
+                      <ActivityIndicator color={colors.primaryText} />
+                    ) : (
+                      <Text style={styles.submitButtonText}>
+                        Salvei minha nova chave e quero entrar
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               )}
