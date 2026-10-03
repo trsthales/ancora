@@ -50,6 +50,13 @@
       "when": 1791046696781,
       "tag": "0006_drop_email_and_truncate_profile_timestamp",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791065057128,
+      "tag": "0007_backend_hardening_zero_pii_and_token_version",
+      "breakpoints": true
     }
   ]
 }

@@ -2,7 +2,6 @@ export type Persona = 'navegador' | 'apoio';
 
 export interface User {
   id: string;
-  email?: string | null;
   role: string;
   isAdult?: boolean;
   createdAt: string;

@@ -5,15 +5,15 @@ declare module '@fastify/jwt' {
   interface FastifyJWT {
     payload: {
       sub: string; // user.id
-      profileId: string; // profile.id
       role: string; // user.role
       persona: string; // profile.persona
+      tv: number; // user.tokenVersion
     };
     user: {
       sub: string;
-      profileId: string;
       role: string;
       persona: string;
+      tv: number;
     };
   }
 }

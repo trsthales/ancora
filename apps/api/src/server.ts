@@ -3,11 +3,12 @@ import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import fastifyJwt from '@fastify/jwt';
 import fastifyRateLimit from '@fastify/rate-limit';
-import { DrizzleQueryError, sql } from 'drizzle-orm';
+import { DrizzleQueryError, eq, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { z } from 'zod';
 import { env } from './env.js';
 import { db } from './db/index.js';
+import { users } from './db/schema/index.js';
 import { startQueue, stopQueue, isQueueRunning } from './queue/index.js';
 import { loggerConfig } from './lib/logger.js';
 import { initDummyHash } from './lib/hash.js';
@@ -133,6 +134,22 @@ export const buildServer = async () => {
       return reply.status(401).send({
         status: 'error',
         message: 'Token de autenticação inválido ou expirado.',
+      });
+    }
+
+    const [user] = await db
+      .select({
+        id: users.id,
+        tokenVersion: users.tokenVersion,
+      })
+      .from(users)
+      .where(eq(users.id, request.user.sub))
+      .limit(1);
+
+    if (!user || user.tokenVersion !== request.user.tv) {
+      return reply.status(401).send({
+        status: 'error',
+        message: 'Sessão revogada ou conta inexistente.',
       });
     }
   });

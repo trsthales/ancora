@@ -115,113 +115,125 @@ export type LogoutBodyInput = z.infer<typeof logoutBodySchema>;
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
   // POST /register
-  app.post('/register', async (request, reply) => {
-    const parseResult = registerBodySchema.safeParse(request.body);
+  app.post(
+    '/register',
+    {
+      config: {
+        rateLimit: {
+          max: 10,
+          timeWindow: 60 * 1000,
+        },
+      },
+    },
+    async (request, reply) => {
+      const parseResult = registerBodySchema.safeParse(request.body);
 
-    if (!parseResult.success) {
-      const firstMessage = parseResult.error.issues[0]?.message ?? 'Dados de cadastro inválidos.';
-      return reply.status(400).send({
-        status: 'error',
-        message: firstMessage,
-        errors: parseResult.error.flatten().fieldErrors,
-      });
-    }
-
-    const {
-      password,
-      persona,
-      termsVersion,
-      privacyPolicyVersion,
-      healthDataConsent,
-    } = parseResult.data;
-
-    // 1. Hash da senha com Argon2id ANTES da transação do banco (~250ms de CPU/RAM fora do pool)
-    const passwordHash = await hashPassword(password);
-
-    // 2. Gerar Chave Mestra Crockford Base32 e seu hash SHA-256 ANTES da transação
-    const recoveryKey = generateRecoveryKey();
-    const recoveryKeyHash = hashRecoveryKey(recoveryKey);
-
-    try {
-      const registrationResult = await db.transaction(async (tx) => {
-        // 3. Gerar pseudônimo automático único e loginToken
-        let pseudonym = await generateAvailablePseudonym(tx);
-        let loginToken = deriveLoginToken(pseudonym);
-
-        for (let attempt = 0; attempt < 5; attempt++) {
-          const [existingUser] = await tx
-            .select({ id: users.id })
-            .from(users)
-            .where(eq(users.loginToken, loginToken))
-            .limit(1);
-
-          if (!existingUser) {
-            break;
-          }
-          pseudonym = await generateAvailablePseudonym(tx);
-          loginToken = deriveLoginToken(pseudonym);
-        }
-
-        // 4. Insert em auth_security.users (Zero-PII absoluto, sem coluna email)
-        const [createdUser] = await tx
-          .insert(users)
-          .values({
-            loginToken,
-            passwordHash,
-            recoveryKeyHash,
-            isAdult: true,
-            role: 'user',
-          })
-          .returning({
-            id: users.id,
-            role: users.role,
-            createdAt: users.createdAt,
-          });
-
-        if (!createdUser) {
-          throw new Error('Falha ao criar o registro de usuário.');
-        }
-
-        // 5. Insert em auth_security.consents (Art. 11 LGPD)
-        await tx.insert(consents).values({
-          userId: createdUser.id,
-          termsVersion,
-          privacyPolicyVersion,
-          healthDataConsent,
+      if (!parseResult.success) {
+        const firstMessage = parseResult.error.issues[0]?.message ?? 'Dados de cadastro inválidos.';
+        return reply.status(400).send({
+          status: 'error',
+          message: firstMessage,
+          errors: parseResult.error.flatten().fieldErrors,
         });
+      }
 
-        // 6. Insert em recovery_core.profiles
-        const accountToken = deriveAccountToken(createdUser.id);
+      const {
+        password,
+        persona,
+        termsVersion,
+        privacyPolicyVersion,
+        healthDataConsent,
+      } = parseResult.data;
 
-        const [createdProfile] = await tx
-          .insert(profiles)
-          .values({
-            accountToken,
-            pseudonym,
-            avatarId: 'avatar_default',
-            persona,
-          })
-          .returning({
-            id: profiles.id,
-            pseudonym: profiles.pseudonym,
-            avatarId: profiles.avatarId,
-            persona: profiles.persona,
+      // 1. Hash da senha com Argon2id ANTES da transação do banco (~250ms de CPU/RAM fora do pool)
+      const passwordHash = await hashPassword(password);
+
+      // 2. Gerar Chave Mestra Crockford Base32 e seu hash SHA-256 ANTES da transação
+      const recoveryKey = generateRecoveryKey();
+      const recoveryKeyHash = hashRecoveryKey(recoveryKey);
+
+      try {
+        const registrationResult = await db.transaction(async (tx) => {
+          // 3. Gerar pseudônimo automático único e loginToken
+          let pseudonym = await generateAvailablePseudonym(tx);
+          let loginToken = deriveLoginToken(pseudonym);
+
+          for (let attempt = 0; attempt < 5; attempt++) {
+            const [existingUser] = await tx
+              .select({ id: users.id })
+              .from(users)
+              .where(eq(users.loginToken, loginToken))
+              .limit(1);
+
+            if (!existingUser) {
+              break;
+            }
+            pseudonym = await generateAvailablePseudonym(tx);
+            loginToken = deriveLoginToken(pseudonym);
+          }
+
+          // 4. Insert em auth_security.users (Zero-PII absoluto, sem coluna email, tokenVersion 0)
+          const [createdUser] = await tx
+            .insert(users)
+            .values({
+              loginToken,
+              passwordHash,
+              recoveryKeyHash,
+              tokenVersion: 0,
+              isAdult: true,
+              role: 'user',
+            })
+            .returning({
+              id: users.id,
+              role: users.role,
+              tokenVersion: users.tokenVersion,
+              createdAt: users.createdAt,
+            });
+
+          if (!createdUser) {
+            throw new Error('Falha ao criar o registro de usuário.');
+          }
+
+          // 5. Insert em auth_security.consents (Art. 11 LGPD)
+          await tx.insert(consents).values({
+            userId: createdUser.id,
+            termsVersion,
+            privacyPolicyVersion,
+            healthDataConsent,
           });
 
-        if (!createdProfile) {
-          throw new Error('Falha ao criar o registro de perfil.');
-        }
+          // 6. Insert em recovery_core.profiles
+          const accountToken = deriveAccountToken(createdUser.id);
 
-        // 7. Emitir tokens JWT na hora (R11)
-        const accessToken = app.jwt.sign(
-          {
-            sub: createdUser.id,
-            profileId: createdProfile.id,
-            role: createdUser.role,
-            persona: createdProfile.persona,
-          },
-          { expiresIn: '15m' },
-        );
+          const [createdProfile] = await tx
+            .insert(profiles)
+            .values({
+              accountToken,
+              pseudonym,
+              avatarId: 'avatar_default',
+              persona,
+            })
+            .returning({
+              id: profiles.id,
+              pseudonym: profiles.pseudonym,
+              avatarId: profiles.avatarId,
+              persona: profiles.persona,
+            });
+
+          if (!createdProfile) {
+            throw new Error('Falha ao criar o registro de perfil.');
+          }
+
+          // 7. Emitir tokens JWT na hora sem profileId e com tv
+          const accessToken = app.jwt.sign(
+            {
+              sub: createdUser.id,
+              role: createdUser.role,
+              persona: createdProfile.persona,
+              tv: createdUser.tokenVersion,
+            },
+            { expiresIn: '15m' },
+          );
 
         const refreshToken = crypto.randomBytes(32).toString('hex');
         const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
@@ -358,9 +370,9 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       const accessToken = app.jwt.sign(
         {
           sub: user.id,
-          profileId: profile.id,
           role: user.role,
           persona: profile.persona,
+          tv: user.tokenVersion,
         },
         { expiresIn: '15m' },
       );
@@ -442,7 +454,17 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      const providedKeyHash = hashRecoveryKey(recoveryKey);
+      let providedKeyHash: string;
+      try {
+        providedKeyHash = hashRecoveryKey(recoveryKey);
+      } catch {
+        await verifyPassword(getDummyHash(), newPassword).catch(() => false);
+        return reply.status(401).send({
+          status: 'error',
+          message: 'Credenciais de recuperação inválidas.',
+        });
+      }
+
       const isKeyValid =
         providedKeyHash.length === user.recoveryKeyHash.length &&
         crypto.timingSafeEqual(Buffer.from(providedKeyHash), Buffer.from(user.recoveryKeyHash));
@@ -455,47 +477,49 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-    const [profile] = await db
-      .select()
-      .from(profiles)
-      .where(eq(profiles.accountToken, deriveAccountToken(user.id)))
-      .limit(1);
+      const [profile] = await db
+        .select()
+        .from(profiles)
+        .where(eq(profiles.accountToken, deriveAccountToken(user.id)))
+        .limit(1);
 
-    if (!profile) {
-      return reply.status(404).send({
-        status: 'error',
-        message: 'Perfil de usuário não encontrado.',
-      });
-    }
+      if (!profile) {
+        return reply.status(404).send({
+          status: 'error',
+          message: 'Perfil de usuário não encontrado.',
+        });
+      }
 
-    const newPasswordHash = await hashPassword(newPassword);
-    const newRecoveryKey = generateRecoveryKey();
-    const newRecoveryKeyHash = hashRecoveryKey(newRecoveryKey);
+      const newPasswordHash = await hashPassword(newPassword);
+      const newRecoveryKey = generateRecoveryKey();
+      const newRecoveryKeyHash = hashRecoveryKey(newRecoveryKey);
+      const nextTokenVersion = (user.tokenVersion ?? 0) + 1;
 
-    const accessToken = app.jwt.sign(
-      {
-        sub: user.id,
-        profileId: profile.id,
-        role: user.role,
-        persona: profile.persona,
-      },
-      { expiresIn: '15m' },
-    );
+      const accessToken = app.jwt.sign(
+        {
+          sub: user.id,
+          role: user.role,
+          persona: profile.persona,
+          tv: nextTokenVersion,
+        },
+        { expiresIn: '15m' },
+      );
 
-    const refreshToken = crypto.randomBytes(32).toString('hex');
-    const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
+      const refreshToken = crypto.randomBytes(32).toString('hex');
+      const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
 
-    await db.transaction(async (tx) => {
-      // 1. Redefine a senha e a chave de recuperação
-      await tx
-        .update(users)
-        .set({
-          passwordHash: newPasswordHash,
-          recoveryKeyHash: newRecoveryKeyHash,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, user.id));
+      await db.transaction(async (tx) => {
+        // 1. Redefine a senha, a chave de recuperação e incrementa token_version
+        await tx
+          .update(users)
+          .set({
+            passwordHash: newPasswordHash,
+            recoveryKeyHash: newRecoveryKeyHash,
+            tokenVersion: nextTokenVersion,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, user.id));
 
       // 2. Revoga todas as sessões anteriores
       await tx
@@ -584,10 +608,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         ? user.createdAt.toISOString()
         : new Date(user.createdAt).toISOString();
 
-    const profileLastSeenAtFormatted =
-      profile.lastSeenAt instanceof Date
+    const profileLastSeenAtFormatted = profile.lastSeenAt
+      ? profile.lastSeenAt instanceof Date
         ? profile.lastSeenAt.toISOString()
-        : new Date(profile.lastSeenAt).toISOString();
+        : new Date(profile.lastSeenAt).toISOString()
+      : null;
 
     const profileCreatedAtFormatted =
       profile.createdAt instanceof Date
@@ -720,9 +745,9 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
             const activeAccessToken = app.jwt.sign(
               {
                 sub: user.id,
-                profileId: profile.id,
                 role: user.role,
                 persona: profile.persona,
+                tv: user.tokenVersion,
               },
               { expiresIn: '15m' },
             );
@@ -818,9 +843,9 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         const newAccessToken = app.jwt.sign(
           {
             sub: user.id,
-            profileId: profile.id,
             role: user.role,
             persona: profile.persona,
+            tv: user.tokenVersion,
           },
           { expiresIn: '15m' },
         );

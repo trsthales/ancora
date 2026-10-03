@@ -246,19 +246,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteAccount = async (): Promise<void> => {
-    try {
-      await deleteAccountApi();
-    } finally {
-      await storage.removeItem('accessToken');
-      await storage.removeItem('refreshToken');
-      await storage.removeItem('cachedUser');
-      await storage.removeItem('cachedProfile');
-      setUser(null);
-      setProfile(null);
-      setRecoveryKey(null);
-      setJustRegistered(false);
-      setPendingRecovery(null);
-    }
+    // Só expurga dados locais e tokens de autenticação após confirmação de sucesso (HTTP 200) da API
+    await deleteAccountApi();
+
+    await storage.removeItem('accessToken');
+    await storage.removeItem('refreshToken');
+    await storage.removeItem('cachedUser');
+    await storage.removeItem('cachedProfile');
+    setUser(null);
+    setProfile(null);
+    setRecoveryKey(null);
+    setJustRegistered(false);
+    setPendingRecovery(null);
   };
 
   const acknowledgeIdentity = () => {
