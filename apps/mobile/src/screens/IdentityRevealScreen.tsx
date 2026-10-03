@@ -13,6 +13,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme, ThemeColors } from '../contexts/ThemeContext';
+import { formatCanonicalKey } from './RecoverAccountModal';
 
 export const IdentityRevealScreen: React.FC = () => {
   const { profile, recoveryKey, acknowledgeIdentity } = useAuth();
@@ -28,22 +29,26 @@ export const IdentityRevealScreen: React.FC = () => {
     : '@Navegador_000';
 
   const personaLabel = profile?.persona === 'apoio' ? 'Ponto de Apoio' : 'Navegador';
+  const canonicalRecoveryKey = useMemo(
+    () => (recoveryKey ? formatCanonicalKey(recoveryKey) : ''),
+    [recoveryKey],
+  );
 
   const handleCopyKey = async () => {
-    if (!recoveryKey) return;
+    if (!canonicalRecoveryKey) return;
 
     try {
       if (Clipboard && typeof Clipboard.setStringAsync === 'function') {
-        await Clipboard.setStringAsync(recoveryKey);
+        await Clipboard.setStringAsync(canonicalRecoveryKey);
       } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(recoveryKey);
+        await navigator.clipboard.writeText(canonicalRecoveryKey);
       }
       setHasCopied(true);
       setTimeout(() => setHasCopied(false), 2500);
     } catch {
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
         try {
-          await navigator.clipboard.writeText(recoveryKey);
+          await navigator.clipboard.writeText(canonicalRecoveryKey);
           setHasCopied(true);
           setTimeout(() => setHasCopied(false), 2500);
           return;
@@ -51,7 +56,7 @@ export const IdentityRevealScreen: React.FC = () => {
           // Fallback final
         }
       }
-      Alert.alert('Chave de Recuperação', recoveryKey);
+      Alert.alert('Chave de Recuperação', canonicalRecoveryKey);
     }
   };
 
@@ -101,7 +106,7 @@ export const IdentityRevealScreen: React.FC = () => {
 
             <View style={styles.keyContainer}>
               <Text style={styles.keyText} selectable>
-                {recoveryKey}
+                {canonicalRecoveryKey}
               </Text>
             </View>
 

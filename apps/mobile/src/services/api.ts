@@ -42,20 +42,33 @@ export async function refreshAuthTokens(): Promise<string | null> {
     try {
       const currentRefreshToken = await storage.getItem('refreshToken');
       if (!currentRefreshToken) {
-        throw new Error('Sem refresh token');
+        return null;
       }
 
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify({ refreshToken: currentRefreshToken }),
-      });
+      let response: Response;
+      try {
+        response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({ refreshToken: currentRefreshToken }),
+        });
+      } catch {
+        // Erro genérico de rede (ex: TypeError: Network request failed, timeout)
+        // NUNCA apagar tokens por instabilidade de conexão
+        return null;
+      }
 
       if (!response.ok) {
-        throw new Error(`Falha ao renovar token (${response.status})`);
+        // Logout e remoção de tokens APENAS se for estritamente HTTP 401
+        if (response.status === 401) {
+          await storage.removeItem('accessToken');
+          await storage.removeItem('refreshToken');
+          onAuthFailureCallback?.(); // Desloga o usuário
+        }
+        return null;
       }
 
       const payload = await response.json();
@@ -63,7 +76,7 @@ export async function refreshAuthTokens(): Promise<string | null> {
       const newRefreshToken = payload?.data?.refreshToken;
 
       if (!accessToken) {
-        throw new Error('Novo accessToken ausente na resposta de renovação');
+        return null;
       }
 
       await storage.setItem('accessToken', accessToken);
@@ -73,9 +86,7 @@ export async function refreshAuthTokens(): Promise<string | null> {
 
       return accessToken;
     } catch {
-      await storage.removeItem('accessToken');
-      await storage.removeItem('refreshToken');
-      onAuthFailureCallback?.(); // Desloga o usuário
+      // Falhas inesperadas não devem apagar tokens
       return null;
     } finally {
       isRefreshing = false;

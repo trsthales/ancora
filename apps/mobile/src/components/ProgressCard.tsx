@@ -55,7 +55,7 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
       <View style={styles.footerNote}>
         <View style={styles.gentleDot} />
         <Text style={styles.footerText}>
-          Fidelidade à RFC 002: sem streaks punitivos ou cobrança de sequências. O que importa é você estar aqui agora.
+          Sem streaks punitivos ou cobrança de sequências. O que importa é você estar aqui agora.
         </Text>
       </View>
     </View>

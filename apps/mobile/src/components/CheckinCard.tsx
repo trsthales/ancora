@@ -31,6 +31,7 @@ interface CheckinCardProps {
   todayCheckin: Checkin | null;
   isLoadingInitial?: boolean;
   onCheckinSuccess: (checkin: Checkin) => void;
+  onHighCravingIntercept?: (cravingLevel: number) => void;
 }
 
 export const CheckinCard: React.FC<CheckinCardProps> = ({
@@ -38,6 +39,7 @@ export const CheckinCard: React.FC<CheckinCardProps> = ({
   todayCheckin,
   isLoadingInitial = false,
   onCheckinSuccess,
+  onHighCravingIntercept,
 }) => {
   const { colors, theme } = useTheme();
   const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
@@ -60,6 +62,14 @@ export const CheckinCard: React.FC<CheckinCardProps> = ({
 
   const handleSubmit = async () => {
     setErrorMessage(null);
+
+    // Motor de Interceptação Local e Imediata:
+    // Se a fissura for 4 ou 5, dispara o acolhimento localmente antes/concomitantemente ao fetch,
+    // garantindo suporte de 15 minutos mesmo se a rede falhar ou estiver lenta.
+    if (cravingLevel >= 4) {
+      onHighCravingIntercept?.(cravingLevel);
+    }
+
     setIsSubmitting(true);
 
     try {
