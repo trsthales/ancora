@@ -52,7 +52,7 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({ totalCheckins, isLoa
       <View style={styles.footerNote}>
         <View style={styles.gentleDot} />
         <Text style={styles.footerText}>
-          Sem streaks punitivos ou cobrança de sequências. O que importa é você estar aqui agora.
+          Sem cobrança de dias seguidos ou metas rígidas. O que importa é você estar aqui agora.
         </Text>
       </View>
     </View>

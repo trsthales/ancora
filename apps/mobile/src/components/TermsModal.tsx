@@ -111,7 +111,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ visible, onClose }) => {
               Sua identidade civil nunca é revelada para a comunidade. Seus dados de perfil operam
               desacoplados criptograficamente através de tokens HMAC unidirecionais. Nem mesmo os
               administradores do sistema possuem capacidade de correlacionar seus registros de saúde
-              ao seu e-mail sem autorização legal estrita.
+              à sua identidade civil ou dispositivo sem autorização legal estrita.
             </Text>
           </View>
 

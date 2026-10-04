@@ -27,7 +27,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   onNavigateToWelcome,
 }) => {
   const { login } = useAuth();
-  const { theme, colors } = useTheme();
+  const { theme, colors, toggleTheme } = useTheme();
   const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
 
   const [identifier, setIdentifier] = useState('');
@@ -69,14 +69,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <TouchableOpacity
-              onPress={onNavigateToWelcome}
-              style={styles.backButton}
-              accessibilityRole="button"
-              accessibilityLabel="Voltar"
-            >
-              <Text style={styles.backButtonText}>← Voltar</Text>
-            </TouchableOpacity>
+            <View style={styles.headerTopRow}>
+              <TouchableOpacity
+                onPress={onNavigateToWelcome}
+                style={styles.backButton}
+                accessibilityRole="button"
+                accessibilityLabel="Voltar"
+              >
+                <Text style={styles.backButtonText}>← Voltar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.themeToggleButton}
+                onPress={toggleTheme}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  theme === 'dark' ? 'Alternar para tema claro' : 'Alternar para tema escuro'
+                }
+              >
+                <Text style={styles.themeToggleIcon}>{theme === 'dark' ? '☀️' : '🌙'}</Text>
+              </TouchableOpacity>
+            </View>
             <Text style={styles.title}>Entrar no Âncora</Text>
             <Text style={styles.subtitle}>Bem-vindo de volta ao seu porto seguro.</Text>
           </View>
@@ -186,11 +199,29 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
     header: {
       marginBottom: 28,
     },
+    headerTopRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
     backButton: {
       alignSelf: 'flex-start',
       paddingVertical: 8,
       paddingHorizontal: 4,
-      marginBottom: 12,
+    },
+    themeToggleButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    themeToggleIcon: {
+      fontSize: 16,
     },
     backButtonText: {
       color: colors.primary,

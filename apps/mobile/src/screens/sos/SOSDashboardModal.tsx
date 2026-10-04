@@ -53,6 +53,14 @@ export const SOSDashboardModal: React.FC<SOSDashboardModalProps> = ({
     });
   };
 
+  const openCvvChat = () => {
+    Linking.openURL('https://cvv.org.br/chat').catch(() => {
+      alert(
+        'Não foi possível abrir o chat do CVV. Verifique sua conexão com a internet ou ligue diretamente para 188.',
+      );
+    });
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={handleClose}>
       <StatusBar
@@ -182,7 +190,7 @@ export const SOSDashboardModal: React.FC<SOSDashboardModalProps> = ({
               {/* Alternativa de Chat Online do CVV (CLIN-007) */}
               <TouchableOpacity
                 style={styles.chatButton}
-                onPress={() => Linking.openURL('https://cvv.org.br/chat')}
+                onPress={openCvvChat}
                 activeOpacity={0.8}
                 accessibilityRole="link"
                 accessibilityLabel="Não pode falar ao telefone agora? Acesse o Chat do CVV pelo site oficial"

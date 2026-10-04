@@ -47,8 +47,8 @@ export const registerBodySchema = z.object({
       errorMap: () => ({ message: "A persona deve ser 'navegador' ou 'apoio'." }),
     })
     .default('navegador'),
-  termsVersion: z.string().default('2026.1'),
-  privacyPolicyVersion: z.string().default('2026.1'),
+  termsVersion: z.literal('2026.1').default('2026.1'),
+  privacyPolicyVersion: z.literal('2026.1').default('2026.1'),
   healthDataConsent: z.literal(true, {
     errorMap: () => ({
       message:

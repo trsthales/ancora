@@ -11,8 +11,8 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onNavigateToLogin,
   onNavigateToRegister,
 }) => {
-  const { theme, colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { theme, colors, toggleTheme } = useTheme();
+  const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -20,6 +20,19 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
+      <View style={styles.topBar}>
+        <TouchableOpacity
+          style={styles.themeToggleButton}
+          onPress={toggleTheme}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={
+            theme === 'dark' ? 'Alternar para tema claro' : 'Alternar para tema escuro'
+          }
+        >
+          <Text style={styles.themeToggleIcon}>{theme === 'dark' ? '☀️' : '🌙'}</Text>
+        </TouchableOpacity>
+      </View>
       <View style={styles.content}>
         <View style={styles.card}>
           <Text style={styles.icon}>⚓</Text>
@@ -56,11 +69,30 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   );
 };
 
-const createStyles = (colors: ThemeColors) =>
+const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
   StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
+    },
+    topBar: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      paddingHorizontal: 20,
+      paddingTop: 12,
+    },
+    themeToggleButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    themeToggleIcon: {
+      fontSize: 16,
     },
     content: {
       flex: 1,

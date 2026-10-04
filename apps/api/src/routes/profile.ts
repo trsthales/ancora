@@ -13,7 +13,7 @@ export const rotateIdentitySchema = z.object({
       errorMap: () => ({ message: 'Avatar selecionado inválido.' }),
     })
     .optional(),
-  regeneratePseudonym: z.boolean().default(true),
+  regeneratePseudonym: z.boolean().default(false),
 });
 
 export type RotateIdentityInput = z.infer<typeof rotateIdentitySchema>;

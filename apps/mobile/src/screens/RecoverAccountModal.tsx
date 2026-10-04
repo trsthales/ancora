@@ -84,6 +84,7 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
   const [pseudonym, setPseudonym] = useState('');
   const [recoveryKey, setRecoveryKey] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isActivatingSession, setIsActivatingSession] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -97,16 +98,22 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
   const canCompleteRecovery =
     (hasEverCopiedNewKey || hasConfirmedSavedNewKey) && !isActivatingSession;
 
+  const isPasswordValid = newPassword.length >= 8;
+  const isPasswordMatch = newPassword === confirmNewPassword;
+  const hasConfirmPasswordMismatch = confirmNewPassword.length > 0 && !isPasswordMatch;
+
   const isFormValid =
     pseudonym.trim().length > 0 &&
     recoveryKey.trim().length >= 10 &&
-    newPassword.length >= 8 &&
+    isPasswordValid &&
+    isPasswordMatch &&
     !isSubmitting;
 
   const handleResetAndClose = () => {
     setPseudonym('');
     setRecoveryKey('');
     setNewPassword('');
+    setConfirmNewPassword('');
     setErrorMessage(null);
     setNewRotatedKey(null);
     setHasCopied(false);
@@ -207,6 +214,18 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
           style={styles.keyboardContainer}
         >
           <View style={styles.modalCard}>
+            {!newRotatedKey && (
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={handleResetAndClose}
+                activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityRole="button"
+                accessibilityLabel="Fechar modal de recuperação"
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            )}
             <ScrollView
               contentContainerStyle={styles.scrollContent}
               keyboardShouldPersistTaps="handled"
@@ -272,6 +291,22 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
                         <Text style={styles.warningHint}>
                           A nova senha deve ter no mínimo 8 caracteres.
                         </Text>
+                      )}
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>Confirmar Nova Senha</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Repita a nova senha de proteção"
+                        placeholderTextColor={colors.textMuted}
+                        secureTextEntry
+                        autoCapitalize="none"
+                        value={confirmNewPassword}
+                        onChangeText={setConfirmNewPassword}
+                      />
+                      {hasConfirmPasswordMismatch && (
+                        <Text style={styles.warningHint}>As senhas não coincidem.</Text>
                       )}
                     </View>
 
@@ -372,6 +407,7 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
                   <TouchableOpacity
                     style={[
                       styles.submitButton,
+                      styles.successSubmitButton,
                       !canCompleteRecovery && styles.submitButtonDisabled,
                     ]}
                     onPress={handleConfirmAndEnter}
@@ -419,20 +455,40 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
       borderRadius: 24,
       borderWidth: 1,
       borderColor: colors.cardBorder,
-      padding: 24,
+      paddingVertical: 18,
+      paddingHorizontal: 20,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.25,
       shadowRadius: 16,
       elevation: 8,
-      maxHeight: '90%',
+      maxHeight: '92%',
+      position: 'relative',
+    },
+    closeButton: {
+      position: 'absolute',
+      top: 16,
+      right: 16,
+      zIndex: 10,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    closeButtonText: {
+      color: colors.textMuted,
+      fontSize: 16,
+      fontWeight: '600',
+      lineHeight: 18,
     },
     scrollContent: {
-      paddingBottom: 8,
+      paddingBottom: 4,
     },
     header: {
       alignItems: 'center',
-      marginBottom: 20,
+      marginBottom: 14,
     },
     headerIcon: {
       fontSize: 36,
@@ -465,7 +521,7 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
       lineHeight: 18,
     },
     form: {
-      gap: 16,
+      gap: 14,
     },
     inputGroup: {
       gap: 6,
@@ -530,53 +586,53 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
       borderWidth: 1,
       borderColor: '#10b981',
       borderRadius: 20,
-      paddingVertical: 5,
-      paddingHorizontal: 14,
-      marginBottom: 16,
+      paddingVertical: 4,
+      paddingHorizontal: 12,
+      marginBottom: 10,
     },
     successBadgeText: {
       color: '#10b981',
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '600',
       textTransform: 'uppercase',
     },
     successTitle: {
-      fontSize: 20,
+      fontSize: 18,
       fontWeight: '700',
       color: colors.text,
-      marginBottom: 6,
+      marginBottom: 4,
       textAlign: 'center',
     },
     successDesc: {
-      fontSize: 13,
+      fontSize: 12,
       color: colors.textMuted,
       textAlign: 'center',
-      lineHeight: 18,
-      marginBottom: 20,
+      lineHeight: 16,
+      marginBottom: 12,
     },
     newKeyCard: {
       width: '100%',
-      padding: 16,
-      borderRadius: 16,
+      padding: 12,
+      borderRadius: 14,
       backgroundColor: theme === 'dark' ? '#131e32' : '#f0fdfa',
       borderWidth: 1.5,
       borderColor: colors.primary,
-      marginBottom: 20,
+      marginBottom: 12,
     },
     keyContainer: {
       backgroundColor: theme === 'dark' ? '#0b1120' : '#ffffff',
       borderWidth: 1,
       borderColor: theme === 'dark' ? '#1e293b' : '#cbd5e1',
       borderRadius: 10,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: 12,
+      marginBottom: 8,
     },
     keyText: {
       fontFamily: Platform.select({ ios: 'Courier', default: 'monospace' }),
-      fontSize: 15,
+      fontSize: 14,
       fontWeight: '700',
       color: colors.primary,
       letterSpacing: 1.2,
@@ -586,9 +642,9 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
       borderWidth: 1,
       borderColor: colors.primary,
       borderRadius: 10,
-      paddingVertical: 10,
+      paddingVertical: 8,
       alignItems: 'center',
-      marginBottom: 12,
+      marginBottom: 8,
     },
     copyButtonActive: {
       backgroundColor: '#10b981',
@@ -610,24 +666,29 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
       borderLeftWidth: 3,
       borderLeftColor: '#f59e0b',
       borderRadius: 8,
-      padding: 10,
+      padding: 8,
     },
     warningIcon: {
-      fontSize: 15,
-      marginTop: 2,
+      fontSize: 14,
+      marginTop: 1,
     },
     warningText: {
       flex: 1,
-      fontSize: 12,
-      lineHeight: 16,
+      fontSize: 11,
+      lineHeight: 15,
       color: theme === 'dark' ? '#fde68a' : '#b45309',
     },
     checkboxContainer: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-      marginTop: 12,
-      paddingVertical: 4,
+      marginTop: 8,
+      paddingVertical: 2,
+    },
+    successSubmitButton: {
+      width: '100%',
+      paddingVertical: 13,
+      marginTop: 4,
     },
     checkbox: {
       width: 20,

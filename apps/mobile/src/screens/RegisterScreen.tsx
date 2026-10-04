@@ -27,10 +27,11 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   onNavigateToWelcome,
 }) => {
   const { register } = useAuth();
-  const { theme, colors } = useTheme();
+  const { theme, colors, toggleTheme } = useTheme();
   const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
 
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [persona, setPersona] = useState<Persona>('navegador');
   const [isAdult, setIsAdult] = useState(false);
   const [healthDataConsent, setHealthDataConsent] = useState(false);
@@ -39,7 +40,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const isPasswordValid = password.length >= 8;
-  const canSubmit = isAdult && healthDataConsent && isPasswordValid && !isSubmitting;
+  const isPasswordMatch = password === confirmPassword;
+  const hasConfirmPasswordMismatch = confirmPassword.length > 0 && !isPasswordMatch;
+  const canSubmit = isAdult && healthDataConsent && isPasswordValid && isPasswordMatch && !isSubmitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -72,14 +75,27 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <TouchableOpacity
-              onPress={onNavigateToWelcome}
-              style={styles.backButton}
-              accessibilityRole="button"
-              accessibilityLabel="Voltar"
-            >
-              <Text style={styles.backButtonText}>← Voltar</Text>
-            </TouchableOpacity>
+            <View style={styles.headerTopRow}>
+              <TouchableOpacity
+                onPress={onNavigateToWelcome}
+                style={styles.backButton}
+                accessibilityRole="button"
+                accessibilityLabel="Voltar"
+              >
+                <Text style={styles.backButtonText}>← Voltar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.themeToggleButton}
+                onPress={toggleTheme}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  theme === 'dark' ? 'Alternar para tema claro' : 'Alternar para tema escuro'
+                }
+              >
+                <Text style={styles.themeToggleIcon}>{theme === 'dark' ? '☀️' : '🌙'}</Text>
+              </TouchableOpacity>
+            </View>
             <Text style={styles.title}>Começar Jornada</Text>
             <Text style={styles.subtitle}>
               Crie seu acesso seguro. Sua identidade real nunca será revelada a outros membros.
@@ -154,6 +170,23 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               />
               {password.length > 0 && !isPasswordValid && (
                 <Text style={styles.warningText}>A senha precisa ter no mínimo 8 caracteres.</Text>
+              )}
+            </View>
+
+            {/* Campo Confirmar Senha */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Confirmar senha</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Repita a senha de proteção"
+                placeholderTextColor={colors.textMuted}
+                secureTextEntry
+                autoCapitalize="none"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+              {hasConfirmPasswordMismatch && (
+                <Text style={styles.warningText}>As senhas não coincidem</Text>
               )}
             </View>
 
@@ -259,11 +292,29 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
     header: {
       marginBottom: 24,
     },
+    headerTopRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
     backButton: {
       alignSelf: 'flex-start',
       paddingVertical: 8,
       paddingHorizontal: 4,
-      marginBottom: 12,
+    },
+    themeToggleButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    themeToggleIcon: {
+      fontSize: 16,
     },
     backButtonText: {
       color: colors.primary,
