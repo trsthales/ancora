@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { useTheme, ThemeColors } from '../contexts/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandLogo } from '../components/BrandLogo';
 
 interface WelcomeScreenProps {
@@ -29,6 +30,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onNavigateToLogin,
   onNavigateToRegister,
 }) => {
+  const insets = useSafeAreaInsets();
   const { theme, colors, toggleTheme } = useTheme();
   const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
 
@@ -84,9 +86,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
       </View>
 
       {/* Barra superior com botão de alternância de tema */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { marginBottom: Math.max(insets.top, 16) + 8 }]}>
         <TouchableOpacity
-          style={styles.themeToggleButton}
+          style={[styles.themeToggleButton, { top: Math.max(insets.top, 16) + 8 }]}
           onPress={toggleTheme}
           activeOpacity={0.7}
           accessibilityRole="button"
@@ -219,7 +221,7 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
       flexDirection: 'row',
       justifyContent: 'flex-end',
       paddingHorizontal: 20,
-      paddingTop: 10,
+      paddingTop: 0,
       paddingBottom: 4,
       zIndex: 10,
     },

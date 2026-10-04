@@ -15,6 +15,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 
 import { useTheme, ThemeColors } from '../contexts/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RecoverAccountModal } from './RecoverAccountModal';
 
 interface LoginScreenProps {
@@ -26,6 +27,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   onNavigateToRegister,
   onNavigateToWelcome,
 }) => {
+  const insets = useSafeAreaInsets();
   const { login } = useAuth();
   const { theme, colors, toggleTheme } = useTheme();
   const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
@@ -69,17 +71,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <View style={styles.headerTopRow}>
+            <View style={[styles.headerTopRow, { marginBottom: Math.max(insets.top, 16) + 20 }]}>
               <TouchableOpacity
                 onPress={onNavigateToWelcome}
-                style={styles.backButton}
+                style={[styles.backButton, { top: Math.max(insets.top, 16) + 8 }]}
                 accessibilityRole="button"
                 accessibilityLabel="Voltar"
               >
                 <Text style={styles.backButtonText}>← Voltar</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.themeToggleButton}
+                style={[styles.themeToggleButton, { top: Math.max(insets.top, 16) + 8 }]}
                 onPress={toggleTheme}
                 activeOpacity={0.7}
                 accessibilityRole="button"
@@ -190,7 +192,7 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
     },
     scrollContent: {
       paddingHorizontal: 24,
-      paddingTop: 16,
+      paddingTop: 0,
       paddingBottom: 40,
       maxWidth: 520,
       width: '100%',
