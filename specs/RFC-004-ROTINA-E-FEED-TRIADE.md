@@ -1,7 +1,7 @@
-# RFC 004: Sistema de Rotina de Autocuidado, Catálogo de Chips da Tríade e Partilha Comunitária Segura
+# RFC 004.1: Sistema de Rotina de Autocuidado, Catálogo de Chips da Tríade e Partilha Comunitária Segura
 
-- **Status:** Aprovada para Implementação (Sprint 4)
-- **Versão:** 1.1 (Consolidada com Destruição de Grafo Social e Hábitos Locais)
+- **Status:** Aprovada e Consolidada (Substitui e atualiza a RFC-004 v1.1)
+- **Versão:** 1.2 / 4.1 (Revisão Clínica com Exclusão de Medicamentos e Blindagem Regulatória)
 - **Dependência Normativa:** Estende e complementa a [RFC-002 v3.1](specs/RFC-002.md)
 - **Escopo Técnico:** `apps/api` (Fastify / PostgreSQL) e `apps/mobile` (React Native / Expo)
 - **Domínio:** Ativação Comportamental / Mútua Ajuda / Prevenção de Recaída / NA Virtual
@@ -9,16 +9,17 @@
 
 ---
 
-## 1. Motivação e Filosofia de Produto
+## 1. Motivação, Filosofia de Produto e Enquadramento Clínico
 
+### 1.1. O Combate ao "Vazio" Pós-Cessação
 Na recuperação de dependências químicas, o principal gatilho para a recaída nos primeiros meses de abstinência é **"O Vazio"**: o súbito saldo de 6 a 10 horas ociosas no dia que antes eram consumidas pelo ciclo de busca, consumo e ressaca da substância. 
 
-Sem uma estrutura previsível de rotina, o cérebro em sofrimento tende a retornar aos antigos caminhos neurais de busca de alívio rápido.
+Sem uma estrutura previsível de rotina cotidiana, o cérebro em sofrimento psíquico tende a retornar aos antigos caminhos neurais de busca de alívio rápido e compulsão.
 
-Inspirado nas partilhas de **Narcóticos Anônimos (NA)** e fundamentado na **Ativação Comportamental da Terapia Cognitivo-Comportamental (TCC)**, esta RFC introduz o núcleo comunitário e de rotina do Jornada Firme:
-1. **Minha Rotina de Autocuidado:** Uma agenda diária pessoal onde o usuário estrutura e marca suas pequenas vitórias do dia a dia (saúde, exercícios, mente, arte, tarefas reais);
-2. **O Feed da Tríade por "Moderação por Construção":** Em vez de fóruns de texto livre (que demandam moderação 24/7 inviável e correm risco de vazamento de gírias e locais de tráfico), o feed opera através de um **catálogo curado de Chips estruturados** (`chip_id`);
-3. **O Ciclo de Inspiração Cega ("Vou Tentar Isso"):** O usuário que conclui uma atividade saudável pode partilhá-la no feed como `🟢 FAÇO`. Outro membro em dificuldade lê a partilha e, com 1 toque, copia o hábito para a sua própria rotina diária, sem gerar arestas relacionais ou rastreamento social de quem copiou de quem.
+Inspirado nas partilhas horizontais de **Narcóticos Anônimos (NA)** e fundamentado na **Ativação Comportamental da Terapia Cognitivo-Comportamental (TCC)**, esta especificação estabelece o núcleo comunitário e de hábitos do Jornada Firme:
+1. **Minha Rotina de Autocuidado:** Uma agenda diária pessoal onde o usuário estrutura e marca suas pequenas vitórias do dia a dia (alimentação com calma, movimento corporal, tarefas domésticas, mente, arte, hobbies reais e conexão humana);
+2. **O Feed da Tríade por "Moderação por Construção":** Em vez de fóruns de texto livre (que demandam moderação humana 24/7 inviável e correm risco de vazamento de gírias e locais de tráfico), o feed comunitário opera estritamente através de um **catálogo curado de Chips estruturados** (`chip_id`);
+3. **O Ciclo de Inspiração Cega ("Vou Tentar Isso"):** O usuário que conclui uma atividade saudável pode partilhá-la no feed como `🟢 FAÇO`. Outro membro lê a partilha e, com 1 toque, copia o hábito para a sua própria rotina diária, sem gerar arestas relacionais ou rastreamento social de quem copiou de quem.
 
 ```
                   O LOOP VIRTUOSO DA SPRINT 4
@@ -43,13 +44,17 @@ Inspirado nas partilhas de **Narcóticos Anônimos (NA)** e fundamentado na **At
 
 ## 2. Invariantes de Arquitetura e Regras Inegociáveis
 
-1. **Moderação por Construção no `EVITO`:** É terminantemente proibida a publicação de texto livre na categoria `🔴 EVITO`. O usuário seleciona exclusivamente entre os chips pré-definidos do catálogo. Risco de vazamento de endereços de drogas, nomes de estabelecimentos ou gírias: **zero absoluto**.
-2. **A Trava Ética de Medicamentos:** O chip `💊 Tomar meus remédios no horário` é de uso estritamente **privado e pessoal**. Ele existe na rotina do usuário, mas **não possui botão de partilha no feed**, impedindo discussões farmacológicas não supervisionadas ou indução à automedicação entre pares.
-3. **Persistência por `chip_id` Estável no Banco:** O banco de dados nunca armazena o texto literal do chip, apenas identificadores imutáveis (ex: `mind_chess_01`, `mov_walk_run_01`). Mudanças de redação, emojis ou traduções ocorrem no código do cliente sem necessidade de migrations SQL.
-4. **Hábitos Personalizados são 100% Locais (Zero-PII de Rotina):** Se o usuário criar tarefas pessoais com títulos livres em sua rotina (ex: *"Buscar meu filho Pedro na escola"*), esse dado é salvo **estritamente no armazenamento local do dispositivo (`AsyncStorage` / SQLite local)**. Nenhum texto livre pessoal é enviado para o PostgreSQL, eliminando a possibilidade de desanomização por conteúdo de agenda.
-5. **Destruição do Grafo Social (*Blind Action*):** A tabela `my_tools` armazena apenas `(profile_id, chip_id)`. **É proibido armazenar `source_post_id` ou o ID do autor original**. A interação entre quem posta e quem salva é matematicamente cega, impedindo ataques de reconstrução de grafo de amizade ou relacionamento entre perfis.
-6. **Métricas Não-Predatórias:** Não existem contadores públicos de curtidas, contadores de seguidores ou rankings de "usuários mais produtivos". As únicas interações comunitárias são as microações funcionais *"Vou Tentar Isso"* (salva o hábito) e *"Estamos Juntos"* (apoio silencioso).
-7. **Controle de Frequência de Postagens:** Cada usuário pode publicar no máximo **3 postagens por dia no feed comunitário**, desestimulando comportamentos compulsivos de tela e valorizando a partilha focada.
+1. **Delimitação Não-Farmacológica e Blindagem Regulatória (Anti-SaMD):**
+   - O Jornada Firme **não é e não atua como aplicativo de gerenciamento de medicação** (*Software as a Medical Device — SaMD*).
+   - O catálogo oficial do sistema **rejeita categoricamente chips de ingestão de medicamentos controlados** (exclusão definitiva de `morn_meds_01`).
+   - *Justificativa Clínica:* Tratar medicamentos como um hábito comum de checklist cria uma falsa sensação de segurança médica e introduz riscos severos de **dupla dosagem involuntária** (quando o usuário desmarcado toma duas vezes) ou de **omissão de dose** (quando o usuário marca sem ter tomado). O manejo farmacológico deve ser conduzido estritamente com médicos e aplicativos especializados com alarmes dedicados.
+2. **Moderação por Construção no `EVITO`:** É terminantemente proibida a publicação de texto livre na categoria `🔴 EVITO`. O usuário seleciona exclusivamente entre os chips pré-definidos do catálogo. Risco de vazamento de endereços de drogas, nomes de estabelecimentos ou gírias: **zero absoluto**.
+3. **Universalidade dos Chips `FAÇO`:** Sem a presença de chips de medicação, **100% dos chips oficiais da categoria `🟢 FAÇO` passam a ser legítimos e aptos para partilha no feed**. Elimina-se a necessidade de filtros de exceção ou listas de bloqueio no validador da API.
+4. **Persistência por `chip_id` Estável no Banco:** O banco de dados nunca armazena o texto literal do chip, apenas identificadores imutáveis (ex: `mind_chess_01`, `mov_walk_run_01`). Mudanças de redação, emojis ou traduções ocorrem no código do cliente sem necessidade de migrations SQL.
+5. **Hábitos Personalizados são 100% Locais (Zero-PII de Rotina):** Se o usuário criar tarefas pessoais com títulos livres em sua rotina (ex: *"Consulta com Dr. André às 14h"* ou *"Buscar meu filho Pedro na escola"*), esse dado é salvo **estritamente no armazenamento local do dispositivo (`AsyncStorage` / SQLite local)**. Nenhum texto livre pessoal é enviado para o PostgreSQL, eliminando a possibilidade de desanonimização por conteúdo de agenda.
+6. **Destruição do Grafo Social (*Blind Action*):** A tabela `my_tools` armazena apenas `(profile_id, chip_id)`. **É proibido armazenar `source_post_id` ou o ID do autor original**. A interação entre quem posta e quem salva é matematicamente cega, impedindo ataques de reconstrução de grafo de amizade ou relacionamento entre perfis.
+7. **Métricas Não-Predatórias:** Não existem contadores públicos de curtidas, contadores de seguidores ou rankings de "usuários mais produtivos". As únicas interações comunitárias são as microações funcionais *"Vou Tentar Isso"* (salva o hábito) e *"Estamos Juntos"* (apoio silencioso).
+8. **Controle de Frequência de Postagens:** Cada usuário pode publicar no máximo **3 postagens por dia no feed comunitário**, desestimulando comportamentos compulsivos de tela e valorizando a partilha focada.
 
 ---
 
@@ -59,46 +64,46 @@ Todos os chips são redigidos em primeira pessoa, tom sereno, sem termos estigma
 
 ### 3.1. 🟢 Categoria `FAÇO` (Ativação Comportamental e Rotina Viva)
 
-Utilizados tanto no feed comunitário quanto como catálogo base para a agenda pessoal de hábitos.
+Utilizados tanto no feed comunitário quanto como catálogo base para a agenda pessoal de hábitos. **Todos os itens abaixo são compartilháveis no feed.**
 
-| Categoria | `chip_id` | Ícone | Rótulo Canônico do Chip | Permite Feed? |
-| :--- | :--- | :---: | :--- | :---: |
-| **Manhã e Cuidado** | `morn_coffee_01` | ☕ | Café da manhã com calma | Sim |
-| | `morn_meds_01` | 💊 | Tomar meus remédios no horário | **NÃO (Privado)** |
-| | `morn_shower_01` | 🚿 | Banho e cuidado pessoal | Sim |
-| | `morn_bed_01` | 🛏️ | Arrumar a cama e o quarto | Sim |
-| | `morn_water_01` | 💧 | Beber água ao longo do dia | Sim |
-| | `morn_cook_01` | 🍲 | Cozinhar uma refeição em casa | Sim |
-| | `morn_sleep_01` | 😴 | Dormir em um horário regular | Sim |
-| **Movimento** | `mov_walk_run_01` | 🏃 | Caminhada ou corrida matinal | Sim |
-| | `mov_stretch_01` | 🧘 | Alongamento ou yoga | Sim |
-| | `mov_bike_01` | 🚴 | Pedalar | Sim |
-| | `mov_swim_01` | 🏊 | Natação ou esporte | Sim |
-| | `mov_workout_01` | 🏋️ | Treino na academia ou em casa | Sim |
-| | `mov_walk_after_01` | 🚶 | Caminhada leve após o almoço | Sim |
-| **Mente e Hobbies** | `mind_chess_01` | ♟️ | Estudo e treino de xadrez | Sim |
-| | `mind_guitar_01` | 🎸 | Prática de violão / música | Sim |
-| | `mind_reading_01` | 📚 | Leitura de um livro | Sim |
-| | `mind_art_01` | 🎨 | Desenho, pintura ou artesanato | Sim |
-| | `mind_journal_01` | 📓 | Escrever no diário | Sim |
-| | `mind_puzzle_01` | 🧩 | Jogos de raciocínio ou quebra-cabeça | Sim |
-| | `mind_study_01` | 🎓 | Estudo ou curso profissional | Sim |
-| **Vida e Casa** | `life_garden_01` | 🌱 | Cuidar das plantas e pomar | Sim |
-| | `life_clean_01` | 🧹 | Organizar e limpar a casa | Sim |
-| | `life_work_01` | 🛠️ | Trabalho ou tarefa produtiva | Sim |
-| | `life_pet_01` | 🐕 | Cuidar de um animal de estimação | Sim |
-| | `life_market_01` | 🛒 | Fazer as compras da semana | Sim |
-| **Conexão** | `conn_call_01` | 📞 | Ligar para alguém que me apoia | Sim |
-| | `conn_family_01` | 👨‍👩‍👧 | Tempo de qualidade com a família | Sim |
-| | `conn_meeting_01` | 🪑 | Ir a um encontro de apoio mútuo | Sim |
-| | `conn_faith_01` | 🙏 | Momento de oração ou espiritualidade | Sim |
-| | `conn_friends_01` | 🧃 | Programa saudável com amigos | Sim |
+| Categoria | `chip_id` | Ícone | Rótulo Canônico do Chip |
+| :--- | :--- | :---: | :--- |
+| **Manhã e Cuidado** | `morn_coffee_01` | ☕ | Café da manhã com calma |
+| | `morn_shower_01` | 🚿 | Banho e cuidado pessoal |
+| | `morn_bed_01` | 🛏️ | Arrumar a cama e o quarto |
+| | `morn_water_01` | 💧 | Beber água ao longo do dia |
+| | `morn_cook_01` | 🍲 | Cozinhar uma refeição em casa |
+| | `morn_sleep_01` | 😴 | Dormir em um horário regular |
+| **Movimento** | `mov_walk_run_01` | 🏃 | Caminhada ou corrida matinal |
+| | `mov_stretch_01` | 🧘 | Alongamento ou yoga |
+| | `mov_bike_01` | 🚴 | Pedalar |
+| | `mov_swim_01` | 🏊 | Natação ou esporte |
+| | `mov_workout_01` | 🏋️ | Treino na academia ou em casa |
+| | `mov_walk_after_01` | 🚶 | Caminhada leve após o almoço |
+| **Mente e Hobbies** | `mind_chess_01` | ♟️ | Estudo e treino de xadrez |
+| | `mind_guitar_01` | 🎸 | Prática de violão / música |
+| | `mind_reading_01` | 📚 | Leitura de um livro |
+| | `mind_art_01` | 🎨 | Desenho, pintura ou artesanato |
+| | `mind_journal_01` | 📓 | Escrever no diário |
+| | `mind_puzzle_01` | 🧩 | Jogos de raciocínio ou quebra-cabeça |
+| | `mind_study_01` | 🎓 | Estudo ou curso profissional |
+| **Vida e Casa** | `life_garden_01` | 🌱 | Cuidar das plantas e pomar |
+| | `life_clean_01` | 🧹 | Organizar e limpar a casa |
+| | `life_work_01` | 🛠️ | Trabalho ou tarefa produtiva |
+| | `life_pet_01` | 🐕 | Cuidar de um animal de estimação |
+| | `life_market_01` | 🛒 | Fazer as compras da semana |
+| | `life_health_care_01` | 🩺 | Cuidar da minha saúde física |
+| **Conexão** | `conn_call_01` | 📞 | Ligar para alguém que me apoia |
+| | `conn_family_01` | 👨‍👩‍👧 | Tempo de qualidade com a família |
+| | `conn_meeting_01` | 🪑 | Ir a um encontro de apoio mútuo |
+| | `conn_faith_01` | 🙏 | Momento de oração ou espiritualidade |
+| | `conn_friends_01` | 🧃 | Programa saudável com amigos |
 
 ---
 
 ### 3.2. 🔴 Categoria `EVITO` (Gestão Consciente de Gatilhos)
 
-Chips selecionáveis exclusivamente (1 a 3 por post) para registrar decisões firmes de proteção.
+Chips selecionáveis exclusivamente (1 a 3 por post) para registrar decisões firmes de proteção. **Zero texto livre permitido.**
 
 | Subcategoria | `chip_id` | Ícone | Rótulo Canônico do Chip |
 | :--- | :--- | :---: | :--- |
@@ -165,7 +170,7 @@ Técnicas de enfrentamento (*coping*) baseadas em TCC, DBT e vivência comunitá
 | | `help_family_talk_01` | 👨‍👩‍👧 | Contar para alguém próximo como estou me sentindo |
 | **Organizar o Dia** | `help_plan_night_01` | 🗓️ | Planejar as tarefas básicas na noite anterior |
 | | `help_short_list_01` | ✅ | Ter uma lista curta e realista do que fazer hoje |
-| | `help_alarm_reminders_01`| ⏰ | Programar alarmes para remédios e refeições |
+| | `help_alarm_reminders_01`| ⏰ | Programar alarmes para refeições e compromissos |
 | | `help_plan_b_01` | 🧭 | Ter sempre um plano B para momentos de folga |
 | | `help_weekend_plan_01` | 📆 | Planejar atividades saudáveis para o fim de semana |
 | **Pensar Diferente** | `help_write_feelings_01`| 📓 | Escrever em um papel o que estou sentindo |
@@ -219,14 +224,14 @@ CREATE INDEX idx_habit_logs_profile_date ON recovery_core.habit_logs(profile_id,
 
 ### 4.3. Tabela do Feed Comunitário (`recovery_core.triad_posts`)
 
-Armazena as publicações da Tríade estruturadas em arrays de chips.
+Armazena as publicações da Tríade estruturadas em arrays de chips do catálogo oficial.
 
 ```sql
 CREATE TABLE recovery_core.triad_posts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     profile_id UUID NOT NULL REFERENCES recovery_core.profiles(id) ON DELETE CASCADE,
     category VARCHAR(10) NOT NULL CHECK (category IN ('FACO', 'EVITO', 'ME_AJUDA')),
-    chip_ids VARCHAR(32)[] NOT NULL,   -- Array de 1 a 3 chip_ids do catálogo
+    chip_ids VARCHAR(32)[] NOT NULL,   -- Array de 1 a 3 chip_ids canônicos
     saved_count INTEGER NOT NULL DEFAULT 0,    -- Contador anônimo de "Vou Tentar Isso"
     support_count INTEGER NOT NULL DEFAULT 0,  -- Contador de "Estamos Juntos"
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -260,7 +265,7 @@ CREATE UNIQUE INDEX idx_my_tools_profile_chip ON recovery_core.my_tools(profile_
 * `GET /api/v1/journey/habits`:  
   Retorna a lista de hábitos ativos do usuário e quais foram concluídos na data de hoje (fuso `America/Sao_Paulo`).
 * `POST /api/v1/journey/habits`:  
-  Adiciona um chip do catálogo à rotina pessoal.  
+  Adiciona um chip do catálogo oficial à rotina pessoal.  
   Validação Zod: `z.object({ chipId: z.string().max(32) })`.  
   *(A API rejeita qualquer tentativa de enviar títulos livres ou strings customizadas para o servidor).*
 * `POST /api/v1/journey/habits/:id/toggle`:  
@@ -273,16 +278,14 @@ CREATE UNIQUE INDEX idx_my_tools_profile_chip ON recovery_core.my_tools(profile_
 * `POST /api/v1/community/posts`:  
   Publica um card comunitário sob a Tríade.  
   - Rate limit estrito: **máximo de 3 postagens por dia por usuário**.
-  - Validação Zod com Trava de Medicamentos:
-    ```ts
+  - Validação Zod Limpa e Universal:
+    ```typescript
     z.object({
       category: z.enum(['FACO', 'EVITO', 'ME_AJUDA']),
       chipIds: z.array(z.string().max(32)).min(1).max(3),
-    }).refine(data => {
-      // REGRA DE OURO: Bloqueia publicação do chip de medicação no feed
-      return !data.chipIds.includes('morn_meds_01');
-    }, { message: "O hábito de medicação é estritamente pessoal e não pode ser compartilhado no feed comunitário." })
+    })
     ```
+    *(Como remédios foram extirpados do catálogo oficial, todos os chips do catálogo `FACO` são legítimos e compartilháveis, sem necessidade de listas de exceções).*
 * `GET /api/v1/community/feed`:  
   Retorna a timeline recente de posts da comunidade com paginação por cursor.
 * `POST /api/v1/community/posts/:id/try` (Ação Cega / Sem Grafo Social):  
@@ -303,39 +306,44 @@ CREATE UNIQUE INDEX idx_my_tools_profile_chip ON recovery_core.my_tools(profile_
 ### 6.1. Aba "Minha Rotina" (O Checklist Diário de Vida Limpa)
 - Exibe o checklist do dia com a saudação serena: *"Um passo de cada vez"*;
 - Unifica na interface:
-  - **Hábitos Oficiais:** Carregados da API (`recovery_core.habits`);
-  - **Hábitos Personalizados:** Salvos e gerenciados **exclusivamente no storage local do celular**, com selo visual sutil `📱 Hábito Local (Privado)`;
-- Check tátil suave com vibração leve ao marcar cada tarefa;
-- O item de remédio (`morn_meds_01`) possui o selo: `🔒 Hábito Pessoal` e **não exibe** o botão de partilha;
-- Os demais hábitos do catálogo possuem o botão: `Partilhar no Feed 🟢`.
+  - **Hábitos Oficiais:** Carregados da API (`recovery_core.habits`), todos com o botão `Partilhar no Feed 🟢`;
+  - **Tarefas Pessoais Locais:** Salvas e gerenciadas **exclusivamente no storage local do celular**, com selo visual sutil `📱 Hábito Local (Privado)`. Sem envio para o servidor e sem botão de partilha;
+- Check tátil suave com feedback visual ao marcar cada tarefa;
+- **Aviso Clínico de Isenção no Rodapé da Rotina:**
+  > ⚕️ *"O Jornada Firme não substitui acompanhamento médico, psiquiátrico ou farmacológico. Para lembretes de remédios com horários rígidos, recomendamos utilizar aplicativos dedicados de saúde ou os alarmes do seu aparelho."*
 
 ### 6.2. O Painel Vivo (Feed Comunitário)
 - Filtros rápidos em pílulas: `Todas`, `🟢 Faço`, `🔴 Evito`, `🔵 Me Ajuda`;
 - Cards estruturados exibindo o pseudônimo do autor (ex: `@FarolLivre_836`), o badge da categoria e os 1 a 3 chips com seus respectivos ícones e rótulos;
-- Botão funcional **`💡 Vou tentar isso`** (adiciona à rotina do leitor);
+- Botão funcional **`💡 Vou tentar isso`** (adiciona à rotina do leitor sem criar grafo social);
 - Botão funcional **`🤝 Estamos juntos`** (apoio moral silencioso);
 - Fim da timeline com encerramento sereno:  
   *"Você viu as partilhas de hoje. Que tal desligar o aplicativo e viver um momento no mundo real?"*
 
 ---
 
-## 7. Matriz de Ameaças e Mitigações
+## 7. Matriz de Ameaças e Mitigações Atualizada
 
-| Vetor de Risco | Cenário de Ameaça | Mitigação Arquitetural Implementada |
+| Vetor de Risco | Cenário de Ameaça | Mitigação Arquitetural Implementada (RFC-004.1) |
 | :--- | :--- | :--- |
+| **Risco de Dupla Dose / SaMD** | Usuário marca remédio sem ter tomado ou toma dose dupla após esquecer do check. | **Remoção Absoluta:** Medicamentos foram extirpados do catálogo oficial. O sistema foca em Ativação Comportamental pura, evitando classificação como dispositivo médico (SaMD / ANVISA). |
 | **Reconstrução de Grafo Social** | Perito ou invasor analisa o banco para descobrir quem segue ou copia quem. | **Destruição do Elo:** A tabela `my_tools` não guarda `source_post_id`. A notificação no `pg-boss` não carrega o ID de quem clicou. É matematicamente impossível reconstruir o grafo. |
-| **Vazamento por Texto Livre em Hábitos** | Usuário digita nome de médico ou parente em tarefa pessoal e o banco vaza. | **Isolamento Local:** Hábitos personalizados nunca sobem para a API; residem exclusivamente no SQLite/AsyncStorage do aparelho. |
+| **Vazamento por Texto Livre em Hábitos** | Usuário digita dados íntimos ou compromissos civis em tarefas. | **Isolamento Local:** Tarefas personalizadas residem exclusivamente no SQLite/AsyncStorage do aparelho; nunca trafegam na rede nem entram no PostgreSQL. |
 | **Vazamento de Pontos de Tráfico** | Usuário tenta divulgar endereço de venda no `EVITO`. | **Moderação por Construção:** Zero texto livre no `EVITO`. O usuário escolhe apenas chips pré-definidos do catálogo. |
-| **Automedicação entre Pares** | Usuários comparam dosagens de remédios controlados no feed. | **Trava de Sistema:** O chip `morn_meds_01` tem flag `can_share: false` e a API rejeita com HTTP 400 tentativas de publicação. |
 | **Competição e Ansiedade de Streaks** | Usuário se sente cobrado ou envergonhado por não cumprir todas as tarefas. | **Princípio Anti-Cobrança:** Sem contadores de sequências consecutivas, sem perda de pontos e sem rankings. |
 | **Spam no Feed** | Usuário publica compulsivamente no feed. | **Rate Limit:** Máximo de 3 publicações comunitárias por usuário a cada 24 horas. |
 
 ---
 
-## 8. Definição de Pronto da Sprint 4 (DoD Específico)
+## 8. Definição de Pronto da Sprint 4 (DoD Atualizado)
 
-1. **Catálogo Estático Unificado:** Arquivo `apps/mobile/src/constants/chips.ts` implementado com 100% dos IDs, ícones e textos canônicos da Seção 3.
+1. **Catálogo Estático Unificado:** Arquivo `apps/mobile/src/constants/chips.ts` implementado com 100% dos IDs, ícones e textos canônicos da Seção 3 (sem referências a remédios).
 2. **Migrations Canônicas do Drizzle:** Tabelas `habits`, `habit_logs`, `triad_posts` e `my_tools` criadas e migradas sem Foreign Keys relacionais com `auth_security`.
-3. **Trava de Medicamentos Auditada:** Teste automatizado com Vitest garantindo que o backend rejeite com HTTP 400 tentativas de publicação contendo `morn_meds_01`.
-4. **Desacoplamento de Grafo Comprovado:** Teste garantindo que `my_tools` não armazene identificadores do autor original.
-5. **Typecheck e Lint:** `pnpm typecheck` com 0 erros e `pnpm lint` com 0 avisos em todos os workspaces.
+3. **Validação Limpa do Feed:** Validador Zod garantindo que apenas chips canônicos sejam aceitos em `POST /community/posts`, sem texto livre no `EVITO`.
+4. **Desacoplamento de Grafo Comprovado:** Teste automatizado com Vitest garantindo que `my_tools` não armazene identificadores do autor original nem do post de origem.
+5. **Aviso Clínico de Isenção:** Presença do disclaimer médico nas telas de rotina do mobile.
+6. **Typecheck e Lint:** `pnpm typecheck` com 0 erros e `pnpm lint` com 0 avisos em todos os workspaces.
+
+---
+
+Este documento substitui formalmente a RFC-004 v1.1 e passa a ser o documento canônico oficial de produto para a **Sprint 4**.

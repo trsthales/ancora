@@ -71,6 +71,8 @@
 
 ## 🏃 SPRINT 3.5: Debt Hardening, Zero-PII e Governança LGPD — [✅ CONCLUÍDA]
 
+> **Especificação Canônica:** Veja o documento detalhado em [specs/SPEC-SPRINT-03.5-DEBT-HARDENING-E-LGPD.md](file:///home/thales/Projetos/Ancora/specs/SPEC-SPRINT-03.5-DEBT-HARDENING-E-LGPD.md).
+
 - [x] **TASK-351 (Lote 1): Segurança de Vida & UI Resilience**
   - SOS promovido para a raiz de `App.tsx` (funcional para usuários deslogados).
   - Blindagem do `storage.ts` com `try/catch` defensivo para telas bloqueadas no iOS.
