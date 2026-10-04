@@ -12,6 +12,12 @@ export interface ThemeColors {
   primary: string;
   primaryText: string;
   accent: string;
+  brandJornada: string;
+  brandFirme: string;
+  brandSun: string;
+  brandMuted: string;
+  hillBack: string;
+  hillFront: string;
 }
 
 export const darkColors: ThemeColors = {
@@ -23,6 +29,12 @@ export const darkColors: ThemeColors = {
   primary: '#14b8a6',
   primaryText: '#ffffff',
   accent: '#fbbf24',
+  brandJornada: '#f1f5f9',
+  brandFirme: '#5eead4',
+  brandSun: '#fbbf24',
+  brandMuted: '#94a3b8',
+  hillBack: 'rgba(20, 184, 166, 0.07)',
+  hillFront: 'rgba(94, 234, 212, 0.05)',
 };
 
 export const lightColors: ThemeColors = {
@@ -34,6 +46,12 @@ export const lightColors: ThemeColors = {
   primary: '#0d9488',
   primaryText: '#ffffff',
   accent: '#f59e0b',
+  brandJornada: '#17404c',
+  brandFirme: '#386d62',
+  brandSun: '#f59e0b',
+  brandMuted: '#4e6a72',
+  hillBack: 'rgba(13, 148, 136, 0.06)',
+  hillFront: 'rgba(56, 109, 98, 0.08)',
 };
 
 const THEME_STORAGE_KEY = 'ancora_theme';
