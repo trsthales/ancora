@@ -1,5 +1,14 @@
 import { sql } from 'drizzle-orm';
-import { index, integer, pgSchema, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import {
+  date,
+  index,
+  integer,
+  pgSchema,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core';
 
 export const recoverySchema = pgSchema('recovery_core');
 
@@ -42,3 +51,39 @@ export const quarantinedPseudonyms = recoverySchema.table('quarantined_pseudonym
   quarantinedUntil: timestamp('quarantined_until', { withTimezone: true }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const habits = recoverySchema.table(
+  'habits',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    profileId: uuid('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    chipId: varchar('chip_id', { length: 32 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .default(sql`date_trunc('day', now())`)
+      .notNull(),
+  },
+  (table) => [uniqueIndex('idx_habits_profile_chip').on(table.profileId, table.chipId)],
+);
+
+export const habitLogs = recoverySchema.table(
+  'habit_logs',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    habitId: uuid('habit_id')
+      .notNull()
+      .references(() => habits.id, { onDelete: 'cascade' }),
+    profileId: uuid('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    dateKey: date('date_key').notNull(),
+    completedAt: timestamp('completed_at', { withTimezone: true })
+      .default(sql`date_trunc('hour', now())`)
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex('idx_habit_logs_unique_day').on(table.habitId, table.dateKey),
+    index('idx_habit_logs_profile_date').on(table.profileId, table.dateKey),
+  ],
+);

@@ -1,9 +1,9 @@
 # 🌄 Plano de Sprints de Engenharia — Projeto Jornada Firme
 
 - **Metodologia:** Scrum / Kanban Adaptado com Auditoria Adversarial Contínua
-- **Cadência:** 6 Sprints Regulares + 1 Sprint de Hardening (12 semanas / 3 meses)
-- **Stack Oficial:** Node.js (TypeScript) + Fastify + PostgreSQL 16+ + Drizzle ORM + React Native (Expo)
-- **Diretriz Central:** Simplicidade e dignidade (Zero Redis no MVP, Zero-PII por padrão, estrita conformidade com a RFC 002 v3.1 — O NA Virtual).
+- **Cadência:** 7 Sprints Regulares (com Sprint 4 subdividida em 4A e 4B) + 1 Sprint de Hardening (12 semanas / 3 meses)
+- **Stack Oficial:** Node.js 22 LTS (TypeScript strict) + Fastify 5.2 + PostgreSQL 16 Alpine + Drizzle ORM 0.45 + React Native 0.86 (Expo 57) + pg-boss 12.35 + Vitest 5.0
+- **Diretriz Central:** Simplicidade, dignidade e respeito clínico (Zero Redis no MVP, Zero-PII por padrão, estrita conformidade com a RFC 002 v3.1, RFC 003 e RFC 004.1 — O NA Virtual).
 
 ---
 
@@ -15,13 +15,16 @@
 | **Sprint 2** | **Fase 1 (A):** Autenticação 18+, Pseudonimato e Onboarding | ✅ Concluída | Cadastro 18+, JWT com RTR e telas de onboarding mobile. |
 | **Sprint 3** | **Fase 1 (B) & 2 (A):** Semáforo SOS e Check-in com Alternativas | ✅ Concluída | SOS offline-first, check-in diário com interceptação e temas Claro/Escuro. |
 | **Sprint 3.5** | **Debt Hardening:** Segurança, Zero-PII & Governança LGPD | ✅ Concluída | HMAC real, Chave Crockford `FIRME-`, Rate Limit Dual-Bucket e expurgo Art. 18, VI. |
-| **Sprint 4** | **Fase 2 (B) & 3 (A):** Minha Rotina, Hábitos e o Feed da Tríade | 🚀 Próxima | Agenda de autocuidado diário, partilha no feed comunitário e "Vou Tentar Isso". |
+| **Sprint 4A** | **Fase 2 (B):** Modo Pessoal — Minha Rotina, Meus Momentos e Ativação | 🚀 Próxima | Checklist de hábitos (teto 15), PUT idempotente, Meus Momentos, Dia Leve e storage cifrado. |
+| **Sprint 4B** | **Fase 3 (A):** Modo Social — Feed Finito da Tríade, Ações Cegas e E-mail | ⏳ Planejada | Feed finito (20 posts), Estratégia da Semana, Ações Cegas sem grafo, Notificações em lote e E-mail AES-256. |
 | **Sprint 5** | **Fase 3 (B) & 4 (A):** Reuniões de Texto, Presença Silenciosa e Moderação | ⏳ Planejada | Salas de texto agendadas (estilo NA), body doubling com threshold e moderação básica. |
 | **Sprint 6** | **Fase 4 (B) & 5:** Trilha Família, Sustentabilidade e Piloto Alpha | ⏳ Planejada | Conteúdo Ponte para familiares, apoiador solidário e homologação do piloto (40 usuários). |
 
 ---
 
 ## 🏃 SPRINT 1: Fundação, Schemas Segregados e Migrations — [✅ CONCLUÍDA]
+
+> **Especificação Canônica:** Veja o documento detalhado em [`specs/SPEC-SPRINT-01-FUNDACAO-E-INFRA.md`](specs/SPEC-SPRINT-01-FUNDACAO-E-INFRA.md).
 
 - [x] **TASK-101: Estruturação do Monorepo e Configurações Base**
   - Monorepo pnpm com workspaces `@ancora/api`, `@ancora/mobile` e `@ancora/admin`.
@@ -40,9 +43,11 @@
 
 ## 🏃 SPRINT 2: Autenticação 18+, Pseudonimato e Onboarding — [✅ CONCLUÍDA]
 
+> **Especificação Canônica:** Veja o documento detalhado em [`specs/SPEC-SPRINT-02-AUTENTICACAO-E-ONBOARDING.md`](specs/SPEC-SPRINT-02-AUTENTICACAO-E-ONBOARDING.md).
+
 - [x] **TASK-201: Endpoint de Registro com Trava 18+ (`POST /api/v1/auth/register`)**
   - Validação Zod com exigência estrita de maioridade (18+).
-  - Hashing de senha com Argon2id.
+  - Hashing de senha com Argon2id com pimenta de aplicação (`APP_PEPPER_V1`).
 - [x] **TASK-202: Mecanismo de Autenticação JWT com Refresh Token**
   - Access Token (15m) e Refresh Token criptográfico com rotação em `auth_security.sessions`.
   - Middleware Fastify `app.authenticate` para proteção de rotas privadas.
@@ -55,6 +60,8 @@
 ---
 
 ## 🏃 SPRINT 3: Semáforo SOS e Check-in com Alternativas — [✅ CONCLUÍDA]
+
+> **Especificação Canônica:** Veja o documento detalhado em [`specs/SPEC-SPRINT-03-SEMAFORO-SOS-E-CHECKIN.md`](specs/SPEC-SPRINT-03-SEMAFORO-SOS-E-CHECKIN.md).
 
 - [x] **TASK-301 & 302: Semáforo SOS em 3 Níveis (100% Offline)**
   - Botão flutuante SOS acessível globalmente.
@@ -71,7 +78,7 @@
 
 ## 🏃 SPRINT 3.5: Debt Hardening, Zero-PII e Governança LGPD — [✅ CONCLUÍDA]
 
-> **Especificação Canônica:** Veja o documento detalhado em [specs/SPEC-SPRINT-03.5-DEBT-HARDENING-E-LGPD.md](file:///home/thales/Projetos/Ancora/specs/SPEC-SPRINT-03.5-DEBT-HARDENING-E-LGPD.md).
+> **Especificação Canônica:** Veja o documento detalhado em [`specs/SPEC-SPRINT-03.5-DEBT-HARDENING-E-LGPD.md`](specs/SPEC-SPRINT-03.5-DEBT-HARDENING-E-LGPD.md).
 
 - [x] **TASK-351 (Lote 1): Segurança de Vida & UI Resilience**
   - SOS promovido para a raiz de `App.tsx` (funcional para usuários deslogados).
@@ -98,41 +105,85 @@
 - [x] **TASK-356 (P0): Saneamento Estrutural e Testes de Invariantes**
   - Padronização definitiva da marca **Jornada Firme** e chave `FIRME-`.
   - Regra `no-explicit-any` como erro no ESLint e remoção de `no-useless-catch`.
-  - Primeira suíte de testes com **Vitest** (Crockford, HMAC e rate-limiting).
+  - Suíte formal de testes com **Vitest** (Crockford, HMAC e rate-limiting).
   - Confirmação mandante da chave mestra com persistência em `pendingKeyReveal`.
 
 ---
 
-## 🏃 SPRINT 4: Minha Rotina, Hábitos e o Feed da Tríade — [🚀 PRÓXIMA]
+## 🏃 SPRINT 4A: Modo Pessoal — Minha Rotina, Meus Momentos e Ativação — [🚀 PRÓXIMA]
 
-**Objetivo da Sprint:** Construir o verdadeiro NA Virtual: a agenda diária de autocuidado para preenchimento saudável do tempo livre (Ativação Comportamental) e o feed de partilha comunitária assíncrona (`FAÇO / EVITO / ME AJUDA`).
+> **Especificação Canônica:** Veja o documento detalhado em [`specs/SPEC-SPRINT-04-PLANO-MESTRE-CONSOLIDADO.md`](specs/SPEC-SPRINT-04-PLANO-MESTRE-CONSOLIDADO.md) (Seção 3).  
+> **Diretriz Central:** Modo Single-Player / 100% Privado. Pronto para uso imediato sem risco de moderação comunitária.
 
-### Tarefas da Sprint 4:
+### Tarefas da Sprint 4A:
 
-- [ ] **TASK-401: Minha Agenda de Autocuidado (Backend de Hábitos)**
-  - Tabela `recovery_core.habits` (id, profile_id, title, category: `saude | movimento | mente | vida`, created_at).
-  - Tabela `recovery_core.habit_logs` (id, habit_id, completed_at com fuso SP).
-  - Endpoints autenticados: `GET /journey/habits`, `POST /journey/habits` (criar atividade), `POST /journey/habits/:id/toggle` (dar check no dia).
-  - **Zero Streaks:** Sem contadores de sequências obrigatórias ou mensagens punitivas. O foco é estar ativo hoje.
-- [ ] **TASK-402: Interface Mobile da Minha Rotina (O Checklist do Dia)**
-  - Tela/Aba "Minha Rotina" no mobile permitindo gerenciar as atividades diárias (remédios, caminhada/corrida, xadrez, violão, pomar/plantas, etc.).
-  - Check tátil suave com feedback visual ao concluir cada tarefa.
-  - Botão em cada hábito concluído: *"Partilhar no Feed"* (transforma a vitória pessoal em um post `🟢 FAÇO`).
-- [ ] **TASK-403: Backend do Feed sob a Tríade Semântica**
-  - Tabela `recovery_core.triad_posts` categorizada estritamente em:
-    - `🟢 FAÇO` (Ativação comportamental e rotina saudável);
-    - `🔴 EVITO` (Proteção contra gatilhos e ambientes de risco);
-    - `🔵 ME AJUDA` (Ferramentas empíricas úteis).
-  - Sanitização automática bloqueando menções a nomes de estabelecimentos, ruas ou gírias de compra no `EVITO`.
-  - Limite estrito de no máximo 3 publicações por dia por usuário para evitar uso compulsivo da tela.
-- [ ] **TASK-404: Microação "Vou Tentar Isso" e "Estamos Juntos"**
-  - Tabela `recovery_core.my_tools`: ao clicar em *"Vou Tentar Isso"*, a rotina compartilhada pelo colega é copiada diretamente para a lista de hábitos do leitor.
-  - Reação empática silenciosa *"Estamos Juntos"* (sem contadores de curtidas ou rankings de popularidade).
-  - Notificação assíncrona discreta para o autor via `pg-boss`: *"Sua rotina inspirou um colega hoje."*
-- [ ] **TASK-405: Interface do Feed Mobile**
-  - Linha do tempo assíncrona no mobile estruturada nas cores da Tríade.
-  - Modal de publicação com seleção obrigatória de categoria e limite de 280 caracteres.
-  - Botão de saída rápida após a leitura, reforçando o princípio *Apoio > Retenção*.
+- [ ] **TASK-401: Backend da Rotina de Hábitos Pessoais (`apps/api`)**
+  - Migration Drizzle 0008 criando `recovery_core.habits` e `recovery_core.habit_logs`.
+  - Catálogo canônico autoritativo de 30 chips saudáveis em `apps/api/src/constants/chips.ts` com validação estrita via `z.enum`.
+  - **Eliminação Definitiva de Medicamentos (Anti-SaMD):** Zero chips farmacológicos no catálogo oficial.
+  - Endpoints: `GET /journey/habits?dateKey=YYYY-MM-DD`, `POST /journey/habits` (teto rígido de 15 hábitos) e `DELETE /journey/habits/:id`.
+  - **Idempotência Real via PUT:** Endpoint `PUT /journey/habits/:id/logs/:dateKey` recebendo `{ completed: boolean }` ($f(f(x)) = f(x)$), eliminando o falso toggle flip-flop.
+  - **Truncamento de Timestamp:** `completed_at` truncado para a hora cheia (`date_trunc('hour', now())`), aniquilando correlação temporal em dumps.
+  - **Janela de Tolerância Continental:** Validação de `dateKey` em $\pm 1$ dia relativo ao servidor, acolhendo os 4 fusos do Brasil sem coletar GPS ou fuso do usuário (Zero-PII).
+- [ ] **TASK-402: Interface Mobile "Minha Rotina" e Recursos Pessoais (`apps/mobile`)**
+  - Checklist diário sereno com check tátil suave e cabeçalho *"Um passo de cada vez"*.
+  - **Módulo de Tarefas Locais Privadas (Zero-PII):** Tarefas livres de texto pessoal (máx 5 a 10 tarefas, títulos max 60 chars) salvas em `encryptedStorage` com cifra AES-256-GCM via chave de hardware no `SecureStore` (`THIS_DEVICE_ONLY`).
+  - **Proteção contra Backup em Nuvem:** Desativação de backup automático no `app.json` (`android:allowBackup="false"`), impedindo que dados de saúde vazem para Google Drive ou iCloud.
+  - **Modo "Dia Leve":** Botão manual *"Hoje está pesado"* e ativação automática em check-in com fissura $\ge 4$, colapsando a rotina para 1 a 2 itens básicos sob *"Hoje basta isso"* (sem pendências vermelhas).
+  - **Primeiro Uso Guiado:** Onboarding da rotina com a pergunta *"Quando costuma ser mais difícil para você?"*, filtrando 1 a 3 sugestões iniciais contextualizadas.
+  - **Funcionalidade "Meus Momentos":** Agendamento 100% local no celular (máx 3 horários na semana via `expo-notifications`), disparo neutro *"Seu momento do dia chegou. Quer olhar sua lista?"*, bottom sheet com 1 a 3 ações e botão *"Agora não"*. Zero dados enviados à API.
+  - **Revisão Semanal Aditiva:** Resumo semanal privado com linguagem puramente aditiva (*"Esta semana você caminhou em 3 dias"*), banindo a linguagem de déficit (*"3 de 7"*), porcentagens e barras.
+  - **Aviso Clínico de Isenção:** Disclaimer no rodapé esclarecendo que o app não gerencia remédios nem substitui orientação médica.
+- [ ] **TASK-401-T: Suíte Vitest de Invariantes da 4A (`apps/api`)**
+  - Teste de idempotência real via `PUT ... logs/:dateKey` (chamadas repetidas mantêm o mesmo estado exato sem duplicar linhas).
+  - Teste de barreira máxima de 15 hábitos ativos (16ª tentativa rejeitada com HTTP 400).
+  - Teste de rejeição de texto livre ou chips inválidos via `z.enum`.
+  - Teste de asserção estrutural de ausência de streaks (`currentStreak`, `streakBroken` ausentes no JSON retornado pela API).
+
+---
+
+## 🏃 SPRINT 4B: Modo Comunitário — Feed da Tríade, Ações Cegas e E-mail — [⏳ PLANEJADA]
+
+> **Especificação Canônica:** Veja o documento detalhado em [`specs/SPEC-SPRINT-04-PLANO-MESTRE-CONSOLIDADO.md`](specs/SPEC-SPRINT-04-PLANO-MESTRE-CONSOLIDADO.md) (Seção 4).  
+> **Diretriz Central:** Modo Multiplayer / Mútua Ajuda Assíncrona. Sobe após validação da rotina pessoal.
+
+### Tarefas da Sprint 4B:
+
+- [ ] **TASK-403: Backend do Feed Finito da Tríade (`apps/api`)**
+  - Migration Drizzle 0009 criando `triad_posts`, `daily_post_limits`, `my_tools`, `post_supports`, `daily_metrics` e `user_recovery_emails`.
+  - Catálogo canônico de chips `EVITO` e `ME AJUDA` na API com validação estrita por categoria.
+  - **Feed Finito (LIMIT 20):** Retorno de no máximo 20 posts mais recentes com diversidade de vozes garantida via Window Function (`ROW_NUMBER() OVER (PARTITION BY profile_id ...)` garantindo `author_post_rank <= 1`).
+  - **Período de Escuta de 24h:** Contas com menos de 24 horas navegam em modo acolhimento (usam rotina e SOS, mas não publicam no feed).
+  - **Controle Atômico de Cota:** Trava de no máximo 3 posts/dia calculada no relógio do servidor via `daily_post_limits` com CTE atômica anti-race condition.
+  - Suporte ao campo `isAnonymous: boolean` no post (removendo pseudônimo no retorno para proteger quem expõe gatilhos do `EVITO`).
+- [ ] **TASK-404: Ações Cegas, 3 Destinos e Reações Silenciosas (`apps/api`)**
+  - **Ação "Vou Tentar Isso" com 3 Destinos:**
+    - `🟢 FAÇO` $\rightarrow$ Entra na Minha Rotina (se $< 15$ hábitos; se cheio, salva em `my_tools` com mensagem suave).
+    - `🔴 EVITO` $\rightarrow$ Entra no Meu Plano de Proteção (mural sem caixas de marcar).
+    - `🔵 ME AJUDA` $\rightarrow$ Entra em Minhas Ferramentas (primeiros socorros rápidos).
+  - **CTE Atômica no `saved_count`:** Incrementa o contador do post exclusivamente se uma nova linha foi inserida em `my_tools` (imune a cliques repetidos).
+  - **Desacoplamento Permanente:** A ferramenta salva em `my_tools` permanece válida mesmo se o post original for deletado ou moderado.
+  - **Reação "Estamos Juntos":** Deduplicada via `reaction_token = HMAC-SHA256(profile_id || post_id, PEPPER)` na tabela `post_supports` (1 apoio por usuário por post, sem reconstrução de grafo social).
+  - **Notificações em Lote no `pg-boss`:** Jobs assíncronos que acumulam apoios e inspirações para exibição em lote uma vez por dia na Home quando $\ge 3$ pessoas, sem disparar push notifications em tempo real.
+- [ ] **TASK-405: Interface Mobile do Feed Finito e Loop no SOS (`apps/mobile`)**
+  - Linha do tempo finita de 20 posts com pílulas de filtro (Todas, FAÇO, EVITO, ME AJUDA).
+  - **Card Fixo no Topo:** *"Estratégia da Semana"* (conteúdo curado garantindo valor no cold-start).
+  - **Card de Encerramento Sereno:** *"Você viu tudo por hoje. Que tal desligar o aplicativo e viver um momento no mundo real?"* (Apoio > Retenção).
+  - **Zero Badges de Não Lidos:** Proibida qualquer bolinha vermelha ou contador de posts não vistos.
+  - Botão *"Partilhar no Feed 🟢"* ativado na Minha Rotina.
+  - Seletor no modal de publicação: `[ ] Partilhar de forma anônima (sem pseudônimo)`.
+  - **Fechamento do Loop no SOS:** Em fissura $\ge 4$, o `AlternativesModal` exibe no topo *"O que você guardou"*, com 2 a 3 botões grandes de disparo direto (4-7-8, ancoragem ou discador em 1 toque).
+  - Card diário de acolhimento na Home exibindo apoio coletivo em lote: *"Suas partilhas inspiraram algumas pessoas"* e *"Algumas pessoas estão com você hoje"*.
+- [ ] **TASK-406: Vinculação Opcional de E-mail de Recuperação (RFC-003)**
+  - Criptografia em repouso AES-256-GCM com AAD (`userId`) e Blind Index HMAC `email_lookup_hash` em `auth_security.user_recovery_emails`.
+  - Endpoints `/auth/email/bind`, `/verify` (código OTP de 6 dígitos) e `DELETE /email` (desvinculação instantânea com 1 toque).
+  - Endpoint público `/auth/recover-by-email` com tempo de resposta equiparado (~250ms) anti-enumeração de contas.
+  - Tela de configurações no mobile com dicas de privacidade (Apple Hide My Email / Proton) e cumprimento estrito do Teste da Notificação nos e-mails disparados.
+- [ ] **TASK-403-T: Suíte Vitest de Invariantes do Feed (`apps/api`)**
+  - Teste de concorrência atômica no teto de 3 posts/dia sob disparos paralelos via CTE.
+  - Teste de isolamento de `my_tools` comprovando ausência de `author_id` ou `source_post_id`.
+  - Teste de deduplicação cega de apoios em `post_supports`.
+  - Teste do "Teste da Notificação" via varredura regex em todos os templates de e-mail e mensagens do sistema contra termos estigmatizantes (`/droga|v[ií]cio|reca[ií]da|fissura|overdose/i`).
 
 ---
 
@@ -143,7 +194,7 @@
 - [ ] **TASK-502: Interceptação Ativa de Conteúdo Nocivo**
   - Bloqueio pré-publicação de termos de autolesão com redirecionamento automático para apoio do CVV 188.
 - [ ] **TASK-503: Painel Web de Moderação (React + Vite + Tailwind)**
-  - Interface simples para aprovação de relatos em quarentena, gestão de denúncias em 1 toque e destaque da "Estratégia da Semana".
+  - Interface simples para aprovação de relatos em quarentena e gestão de denúncias em 1 toque.
 - [ ] **TASK-504: Salas de Apoio Agendadas em Texto (Reuniões de NA Virtuais)**
   - Gateway WebSocket no Fastify com salas temporárias com hora marcada (ex: *Roda da Noite — 20h às 21h*).
   - Dinâmica com limite de 20 conexões simultâneas e mensagens efêmeras descartadas ao término da reunião.
@@ -157,16 +208,19 @@
 - [ ] **TASK-602: Sustentabilidade Ética (Apoiador Solidário e Assinatura Familiar)**
   - Integração de checkout para contribuição voluntária e planos de familiares, subsidiando o acesso universal e gratuito para o Navegador.
 - [ ] **TASK-603: Homologação e Auditoria Pré-Piloto**
-  - Checklist final de usabilidade e privacidade.
+  - Checklist final de usabilidade, métricas agregadas (`daily_metrics`) e privacidade.
 - [ ] **TASK-604: Execução do Piloto Alpha Controlado (40 Voluntários)**
-  - Monitoramento de 30 dias com coorte fechada de 25 pessoas em recuperação e 15 familiares.
+  - Monitoramento de 30 dias com coorte fechada de 25 pessoas em recuperação e 15 familiares utilizando instrumentação agregada sem rastreamento de PII.
 
 ---
 
-## 🛡️ Definição de Pronto (Definition of Done - DoD)
+## 🛡️ Definição de Pronto Consolidada (Definition of Done - DoD)
 
-1. **Tipagem Estrita:** Código 100% tipado em TypeScript, com flag `no-explicit-any` como erro e zero uso de `any`.
+1. **Tipagem Estrita e Zero Any:** Código 100% tipado em TypeScript, com flag `no-explicit-any` como erro e zero uso de `any`.
 2. **Segregação Criptográfica LGPD:** Nenhuma query relacional direta (`JOIN` ou `FK`) entre `auth_security` e `recovery_core`.
-3. **Teste da Notificação:** Nenhuma notificação push ou e-mail pode conter palavras estigmatizantes ("droga", "vício", "recaída").
-4. **Resiliência de Rede Móvel:** Falhas transitórias de conexão não devem provocar logout do usuário.
-5. **Auditoria de Fechamento de Sprint:** Toda sprint deve encerrar com revisão adversarial e suíte de testes do Vitest passando com 100% de sucesso antes do merge definitivo na `main`.
+3. **Idempotência Real e Semântica de Estado:** Operações de check/uncheck de hábitos utilizam semântica declarativa `PUT` com `{ completed: boolean }`.
+4. **Proteção de Dados em Repouso Local:** Tarefas privadas locais criptografadas com AES-256-GCM no aparelho e `allowBackup="false"` ativo no Android/iOS.
+5. **Teste da Notificação:** Nenhuma notificação push, e-mail ou mensagem transacional pode conter palavras estigmatizantes ("droga", "vício", "recaída", "fissura", "overdose").
+6. **Anti-Dopamina e Design Ético:** Ausência de *streaks*, zero contadores de posts não lidos, feed rigorosamente finito em 20 posts e notificações de inspiração entregues em lote dentro do app.
+7. **Resiliência e Tolerância de Rede:** Falhas transitórias de conexão não devem provocar logout do usuário, e requisições de hábitos aceitam janela de tolerância de $\pm 1$ dia para cobrir os fusos do Brasil.
+8. **Auditoria de Fechamento de Sprint:** Toda sprint deve encerrar com suíte completa de testes do Vitest passando com 100% de sucesso antes do merge definitivo na `main`.

@@ -12,7 +12,13 @@ import { users } from './db/schema/index.js';
 import { startQueue, stopQueue, isQueueRunning } from './queue/index.js';
 import { loggerConfig } from './lib/logger.js';
 import { initDummyHash } from './lib/hash.js';
-import { authRoutes, profileRoutes, journeyRoutes, accountRoutes } from './routes/index.js';
+import {
+  authRoutes,
+  profileRoutes,
+  journeyRoutes,
+  habitsRoutes,
+  accountRoutes,
+} from './routes/index.js';
 
 export function isDatabaseError(err: unknown): boolean {
   if (!err || typeof err !== 'object') return false;
@@ -162,6 +168,10 @@ export const buildServer = async () => {
 
   await app.register(journeyRoutes, {
     prefix: '/api/v1/journey',
+  });
+
+  await app.register(habitsRoutes, {
+    prefix: '/api/v1/journey/habits',
   });
 
   await app.register(accountRoutes, {

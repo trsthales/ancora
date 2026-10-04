@@ -57,6 +57,13 @@
       "when": 1791065057128,
       "tag": "0007_backend_hardening_zero_pii_and_token_version",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791115238583,
+      "tag": "0008_add_habits_and_logs",
+      "breakpoints": true
     }
   ]
 }
