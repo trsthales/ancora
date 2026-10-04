@@ -64,45 +64,41 @@ export const journeyRoutes: FastifyPluginAsync = async (app) => {
 
     const { cravingLevel, mood } = parseResult.data;
 
-    try {
-      const newCheckin = await db.transaction(async (tx) => {
-        const [inserted] = await tx
-          .insert(checkins)
-          .values({
-            profileId,
-            cravingLevel,
-            mood,
-          })
-          .returning();
+    const newCheckin = await db.transaction(async (tx) => {
+      const [inserted] = await tx
+        .insert(checkins)
+        .values({
+          profileId,
+          cravingLevel,
+          mood,
+        })
+        .returning();
 
-        await tx.update(profiles).set({ lastSeenAt: new Date() }).where(eq(profiles.id, profileId));
+      await tx.update(profiles).set({ lastSeenAt: new Date() }).where(eq(profiles.id, profileId));
 
-        return inserted;
-      });
+      return inserted;
+    });
 
-      if (!newCheckin) {
-        throw new Error('Falha ao registrar check-in.');
-      }
-
-      const createdAtFormatted =
-        newCheckin.createdAt instanceof Date
-          ? newCheckin.createdAt.toISOString()
-          : new Date(newCheckin.createdAt).toISOString();
-
-      return reply.status(201).send({
-        status: 'success',
-        data: {
-          checkin: {
-            id: newCheckin.id,
-            cravingLevel: newCheckin.cravingLevel,
-            mood: newCheckin.mood,
-            createdAt: createdAtFormatted,
-          },
-        },
-      });
-    } catch (error: unknown) {
-      throw error;
+    if (!newCheckin) {
+      throw new Error('Falha ao registrar check-in.');
     }
+
+    const createdAtFormatted =
+      newCheckin.createdAt instanceof Date
+        ? newCheckin.createdAt.toISOString()
+        : new Date(newCheckin.createdAt).toISOString();
+
+    return reply.status(201).send({
+      status: 'success',
+      data: {
+        checkin: {
+          id: newCheckin.id,
+          cravingLevel: newCheckin.cravingLevel,
+          mood: newCheckin.mood,
+          createdAt: createdAtFormatted,
+        },
+      },
+    });
   });
 
   // GET /today - Consulta o status de check-in do dia atual (fuso America/Sao_Paulo)
@@ -116,44 +112,40 @@ export const journeyRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
-    try {
-      const [todayCheckin] = await db
-        .select()
-        .from(checkins)
-        .where(
-          and(
-            eq(checkins.profileId, profileId),
-            gte(
-              checkins.createdAt,
-              sql`(date_trunc('day', now() AT TIME ZONE 'America/Sao_Paulo')) AT TIME ZONE 'America/Sao_Paulo'`,
-            ),
+    const [todayCheckin] = await db
+      .select()
+      .from(checkins)
+      .where(
+        and(
+          eq(checkins.profileId, profileId),
+          gte(
+            checkins.createdAt,
+            sql`(date_trunc('day', now() AT TIME ZONE 'America/Sao_Paulo')) AT TIME ZONE 'America/Sao_Paulo'`,
           ),
-        )
-        .orderBy(desc(checkins.createdAt))
-        .limit(1);
+        ),
+      )
+      .orderBy(desc(checkins.createdAt))
+      .limit(1);
 
-      const formattedCheckin = todayCheckin
-        ? {
-            id: todayCheckin.id,
-            cravingLevel: todayCheckin.cravingLevel,
-            mood: todayCheckin.mood,
-            createdAt:
-              todayCheckin.createdAt instanceof Date
-                ? todayCheckin.createdAt.toISOString()
-                : new Date(todayCheckin.createdAt).toISOString(),
-          }
-        : null;
+    const formattedCheckin = todayCheckin
+      ? {
+          id: todayCheckin.id,
+          cravingLevel: todayCheckin.cravingLevel,
+          mood: todayCheckin.mood,
+          createdAt:
+            todayCheckin.createdAt instanceof Date
+              ? todayCheckin.createdAt.toISOString()
+              : new Date(todayCheckin.createdAt).toISOString(),
+        }
+      : null;
 
-      return reply.status(200).send({
-        status: 'success',
-        data: {
-          hasCheckedInToday: Boolean(todayCheckin),
-          checkin: formattedCheckin,
-        },
-      });
-    } catch (error: unknown) {
-      throw error;
-    }
+    return reply.status(200).send({
+      status: 'success',
+      data: {
+        hasCheckedInToday: Boolean(todayCheckin),
+        checkin: formattedCheckin,
+      },
+    });
   });
 
   // GET /history - Histórico recente de check-ins e total acumulado (fuso America/Sao_Paulo)
@@ -180,42 +172,38 @@ export const journeyRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
-    try {
-      const rawHistory = await db
-        .select()
-        .from(checkins)
-        .where(eq(checkins.profileId, profileId))
-        .orderBy(desc(checkins.createdAt))
-        .limit(limit);
+    const rawHistory = await db
+      .select()
+      .from(checkins)
+      .where(eq(checkins.profileId, profileId))
+      .orderBy(desc(checkins.createdAt))
+      .limit(limit);
 
-      const [countResult] = await db
-        .select({
-          count: sql<number>`cast(count(distinct date(created_at at time zone 'America/Sao_Paulo')) as integer)`,
-        })
-        .from(checkins)
-        .where(eq(checkins.profileId, profileId));
+    const [countResult] = await db
+      .select({
+        count: sql<number>`cast(count(distinct date(created_at at time zone 'America/Sao_Paulo')) as integer)`,
+      })
+      .from(checkins)
+      .where(eq(checkins.profileId, profileId));
 
-      const totalCheckins = Number(countResult?.count ?? 0);
+    const totalCheckins = Number(countResult?.count ?? 0);
 
-      const history = rawHistory.map((item) => ({
-        id: item.id,
-        cravingLevel: item.cravingLevel,
-        mood: item.mood,
-        createdAt:
-          item.createdAt instanceof Date
-            ? item.createdAt.toISOString()
-            : new Date(item.createdAt).toISOString(),
-      }));
+    const history = rawHistory.map((item) => ({
+      id: item.id,
+      cravingLevel: item.cravingLevel,
+      mood: item.mood,
+      createdAt:
+        item.createdAt instanceof Date
+          ? item.createdAt.toISOString()
+          : new Date(item.createdAt).toISOString(),
+    }));
 
-      return reply.status(200).send({
-        status: 'success',
-        data: {
-          totalCheckins,
-          history,
-        },
-      });
-    } catch (error: unknown) {
-      throw error;
-    }
+    return reply.status(200).send({
+      status: 'success',
+      data: {
+        totalCheckins,
+        history,
+      },
+    });
   });
 };

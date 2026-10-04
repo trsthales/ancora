@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, ViewStyle, StyleProp, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface SOSFloatingButtonProps {
   onPress: () => void;
@@ -12,9 +13,15 @@ export const SOSFloatingButton: React.FC<SOSFloatingButtonProps> = ({
   style,
   label = 'SOS',
 }) => {
+  const insets = useSafeAreaInsets();
+
   return (
     <TouchableOpacity
-      style={[styles.floatingButton, style]}
+      style={[
+        styles.floatingButton,
+        { bottom: Math.max(insets.bottom, 12) + 16 },
+        style,
+      ]}
       onPress={onPress}
       activeOpacity={0.85}
       accessibilityRole="button"

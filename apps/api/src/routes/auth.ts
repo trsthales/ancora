@@ -12,11 +12,7 @@ import {
   generateRecoveryKey,
   hashRecoveryKey,
 } from '../lib/crypto-token.js';
-import {
-  checkAccountLock,
-  recordLoginFailure,
-  recordLoginSuccess,
-} from '../lib/rate-limit.js';
+import { checkAccountLock, recordLoginFailure, recordLoginSuccess } from '../lib/rate-limit.js';
 
 interface CachedRotation {
   accessToken: string;
@@ -51,8 +47,8 @@ export const registerBodySchema = z.object({
       errorMap: () => ({ message: "A persona deve ser 'navegador' ou 'apoio'." }),
     })
     .default('navegador'),
-  termsVersion: z.string().default('2026.1'),
-  privacyPolicyVersion: z.string().default('2026.1'),
+  termsVersion: z.literal('2026.1').default('2026.1'),
+  privacyPolicyVersion: z.literal('2026.1').default('2026.1'),
   healthDataConsent: z.literal(true, {
     errorMap: () => ({
       message:
@@ -137,13 +133,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      const {
-        password,
-        persona,
-        termsVersion,
-        privacyPolicyVersion,
-        healthDataConsent,
-      } = parseResult.data;
+      const { password, persona, termsVersion, privacyPolicyVersion, healthDataConsent } =
+        parseResult.data;
 
       // 1. Hash da senha com Argon2id ANTES da transação do banco (~250ms de CPU/RAM fora do pool)
       const passwordHash = await hashPassword(password);
@@ -235,60 +226,61 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
             { expiresIn: '15m' },
           );
 
-        const refreshToken = crypto.randomBytes(32).toString('hex');
-        const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
+          const refreshToken = crypto.randomBytes(32).toString('hex');
+          const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+          const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
 
-        await tx.insert(sessions).values({
-          userId: createdUser.id,
-          refreshTokenHash,
-          expiresAt,
+          await tx.insert(sessions).values({
+            userId: createdUser.id,
+            refreshTokenHash,
+            expiresAt,
+          });
+
+          const createdAtFormatted =
+            createdUser.createdAt instanceof Date
+              ? createdUser.createdAt.toISOString()
+              : new Date(createdUser.createdAt).toISOString();
+
+          return {
+            accessToken,
+            refreshToken,
+            recoveryKey,
+            user: {
+              id: createdUser.id,
+              role: createdUser.role,
+              createdAt: createdAtFormatted,
+            },
+            profile: {
+              id: createdProfile.id,
+              pseudonym: createdProfile.pseudonym,
+              avatarId: createdProfile.avatarId,
+              persona: createdProfile.persona,
+            },
+          };
         });
 
-        const createdAtFormatted =
-          createdUser.createdAt instanceof Date
-            ? createdUser.createdAt.toISOString()
-            : new Date(createdUser.createdAt).toISOString();
-
-        return {
-          accessToken,
-          refreshToken,
-          recoveryKey,
-          user: {
-            id: createdUser.id,
-            role: createdUser.role,
-            createdAt: createdAtFormatted,
-          },
-          profile: {
-            id: createdProfile.id,
-            pseudonym: createdProfile.pseudonym,
-            avatarId: createdProfile.avatarId,
-            persona: createdProfile.persona,
-          },
-        };
-      });
-
-      return reply.status(201).send({
-        status: 'success',
-        data: registrationResult,
-      });
-    } catch (error: unknown) {
-      const isUniqueConstraintViolation =
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        (error as { code?: string }).code === '23505';
-
-      if (isUniqueConstraintViolation) {
-        return reply.status(409).send({
-          status: 'error',
-          message: 'Identificador já cadastrado no sistema.',
+        return reply.status(201).send({
+          status: 'success',
+          data: registrationResult,
         });
+      } catch (error: unknown) {
+        const isUniqueConstraintViolation =
+          typeof error === 'object' &&
+          error !== null &&
+          'code' in error &&
+          (error as { code?: string }).code === '23505';
+
+        if (isUniqueConstraintViolation) {
+          return reply.status(409).send({
+            status: 'error',
+            message: 'Identificador já cadastrado no sistema.',
+          });
+        }
+
+        throw error;
       }
-
-      throw error;
-    }
-  });
+    },
+  );
 
   // POST /login
   app.post(
@@ -327,11 +319,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.loginToken, loginToken))
-        .limit(1);
+      const [user] = await db.select().from(users).where(eq(users.loginToken, loginToken)).limit(1);
 
       if (!user) {
         recordLoginFailure(loginToken);
@@ -428,7 +416,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       const parseResult = recoverBodySchema.safeParse(request.body);
 
       if (!parseResult.success) {
-        const firstMessage = parseResult.error.issues[0]?.message ?? 'Dados de recuperação inválidos.';
+        const firstMessage =
+          parseResult.error.issues[0]?.message ?? 'Dados de recuperação inválidos.';
         return reply.status(400).send({
           status: 'error',
           message: firstMessage,
@@ -439,11 +428,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       const { pseudonym, recoveryKey, newPassword } = parseResult.data;
       const loginToken = deriveLoginToken(pseudonym);
 
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.loginToken, loginToken))
-        .limit(1);
+      const [user] = await db.select().from(users).where(eq(users.loginToken, loginToken)).limit(1);
 
       if (!user) {
         // Anti-timing attack dummy hash
@@ -521,45 +506,46 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           })
           .where(eq(users.id, user.id));
 
-      // 2. Revoga todas as sessões anteriores
-      await tx
-        .update(sessions)
-        .set({ revokedAt: new Date() })
-        .where(and(eq(sessions.userId, user.id), isNull(sessions.revokedAt)));
+        // 2. Revoga todas as sessões anteriores
+        await tx
+          .update(sessions)
+          .set({ revokedAt: new Date() })
+          .where(and(eq(sessions.userId, user.id), isNull(sessions.revokedAt)));
 
-      // 3. Insere a nova sessão
-      await tx.insert(sessions).values({
-        userId: user.id,
-        refreshTokenHash,
-        expiresAt,
+        // 3. Insere a nova sessão
+        await tx.insert(sessions).values({
+          userId: user.id,
+          refreshTokenHash,
+          expiresAt,
+        });
       });
-    });
 
-    const userCreatedAtFormatted =
-      user.createdAt instanceof Date
-        ? user.createdAt.toISOString()
-        : new Date(user.createdAt).toISOString();
+      const userCreatedAtFormatted =
+        user.createdAt instanceof Date
+          ? user.createdAt.toISOString()
+          : new Date(user.createdAt).toISOString();
 
-    return reply.status(200).send({
-      status: 'success',
-      data: {
-        accessToken,
-        refreshToken,
-        recoveryKey: newRecoveryKey,
-        user: {
-          id: user.id,
-          role: user.role,
-          createdAt: userCreatedAtFormatted,
+      return reply.status(200).send({
+        status: 'success',
+        data: {
+          accessToken,
+          refreshToken,
+          recoveryKey: newRecoveryKey,
+          user: {
+            id: user.id,
+            role: user.role,
+            createdAt: userCreatedAtFormatted,
+          },
+          profile: {
+            id: profile.id,
+            pseudonym: profile.pseudonym,
+            avatarId: profile.avatarId,
+            persona: profile.persona,
+          },
         },
-        profile: {
-          id: profile.id,
-          pseudonym: profile.pseudonym,
-          avatarId: profile.avatarId,
-          persona: profile.persona,
-        },
-      },
-    });
-  });
+      });
+    },
+  );
 
   // GET /me
   app.get('/me', { preHandler: [app.authenticate] }, async (request, reply) => {
@@ -656,222 +642,228 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const { refreshToken } = parseResult.data;
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
 
-    try {
-      const result = await db.transaction(async (tx) => {
-        // Busca da sessão dentro de db.transaction usando lock pessimista (.for('update'))
-        const [session] = await tx
-          .select()
-          .from(sessions)
-          .where(eq(sessions.refreshTokenHash, tokenHash))
-          .for('update')
-          .limit(1);
+    const result = await db.transaction(async (tx) => {
+      // Busca da sessão dentro de db.transaction usando lock pessimista (.for('update'))
+      const [session] = await tx
+        .select()
+        .from(sessions)
+        .where(eq(sessions.refreshTokenHash, tokenHash))
+        .for('update')
+        .limit(1);
 
-        if (!session) {
-          return {
-            statusCode: 401,
-            body: {
-              status: 'error',
-              message: 'Refresh token inválido ou expirado.',
-            },
-          };
-        }
+      if (!session) {
+        return {
+          statusCode: 401,
+          body: {
+            status: 'error',
+            message: 'Refresh token inválido ou expirado.',
+          },
+        };
+      }
 
-        // Se session.revokedAt !== null:
-        if (session.revokedAt !== null) {
-          const elapsedSeconds = (Date.now() - session.revokedAt.getTime()) / 1000;
+      // Se session.revokedAt !== null:
+      if (session.revokedAt !== null) {
+        const elapsedSeconds = (Date.now() - session.revokedAt.getTime()) / 1000;
 
-          // Se elapsedSeconds <= 10 e session.rotatedToSessionId !== null:
-          // Trata-se de retry legítimo de rede móvel (4G). Não revogar sessões e manter estrita idempotência!
-          if (elapsedSeconds <= 10 && session.rotatedToSessionId !== null) {
-            // Idempotência estrita: verificar se os tokens gerados estão no cache em memória
-            const cached = recentRotations.get(session.id);
-            if (cached) {
-              return {
-                statusCode: 200,
-                body: {
-                  status: 'success',
-                  data: {
-                    accessToken: cached.accessToken,
-                    refreshToken: cached.refreshToken,
-                  },
-                },
-              };
-            }
-
-            // Se não estiver no cache em memória, busca sucessora ativa SEM SOBRESCREVER o hash
-            const [successorSession] = await tx
-              .select()
-              .from(sessions)
-              .where(eq(sessions.id, session.rotatedToSessionId))
-              .limit(1);
-
-            if (!successorSession || successorSession.revokedAt !== null) {
-              await tx
-                .update(sessions)
-                .set({ revokedAt: new Date() })
-                .where(and(eq(sessions.userId, session.userId), isNull(sessions.revokedAt)));
-
-              return {
-                statusCode: 401,
-                body: {
-                  status: 'error',
-                  message: 'Tentativa de reúso de refresh token detectada.',
-                },
-              };
-            }
-
-            const [user] = await tx
-              .select()
-              .from(users)
-              .where(eq(users.id, session.userId))
-              .limit(1);
-
-            const [profile] = await tx
-              .select()
-              .from(profiles)
-              .where(eq(profiles.accountToken, deriveAccountToken(session.userId)))
-              .limit(1);
-
-            if (!user || !profile) {
-              return {
-                statusCode: 401,
-                body: {
-                  status: 'error',
-                  message: 'Usuário ou perfil não encontrado.',
-                },
-              };
-            }
-
-            const activeAccessToken = app.jwt.sign(
-              {
-                sub: user.id,
-                role: user.role,
-                persona: profile.persona,
-                tv: user.tokenVersion,
-              },
-              { expiresIn: '15m' },
-            );
-
+        // Se elapsedSeconds <= 10 e session.rotatedToSessionId !== null:
+        // Trata-se de retry legítimo de rede móvel (4G). Não revogar sessões e manter estrita idempotência!
+        if (elapsedSeconds <= 10 && session.rotatedToSessionId !== null) {
+          // Idempotência estrita: verificar se os tokens gerados estão no cache em memória
+          const cached = recentRotations.get(session.id);
+          if (cached) {
             return {
               statusCode: 200,
               body: {
                 status: 'success',
                 data: {
-                  accessToken: activeAccessToken,
+                  accessToken: cached.accessToken,
+                  refreshToken: cached.refreshToken,
                 },
               },
             };
           }
 
-          // Se elapsedSeconds > 10: Violação real de segurança (reúso tardio).
-          // Revogar imediatamente todas as sessões ativas do usuário e retornar HTTP 401.
+          // Se não estiver no cache em memória, busca sucessora ativa e gera novo par legítimo
+          const [successorSession] = await tx
+            .select()
+            .from(sessions)
+            .where(eq(sessions.id, session.rotatedToSessionId))
+            .limit(1);
+
+          if (!successorSession || successorSession.revokedAt !== null) {
+            await tx
+              .update(sessions)
+              .set({ revokedAt: new Date() })
+              .where(and(eq(sessions.userId, session.userId), isNull(sessions.revokedAt)));
+
+            return {
+              statusCode: 401,
+              body: {
+                status: 'error',
+                message: 'Tentativa de reúso de refresh token detectada.',
+              },
+            };
+          }
+
+          const [user] = await tx.select().from(users).where(eq(users.id, session.userId)).limit(1);
+
+          const [profile] = await tx
+            .select()
+            .from(profiles)
+            .where(eq(profiles.accountToken, deriveAccountToken(session.userId)))
+            .limit(1);
+
+          if (!user || !profile) {
+            return {
+              statusCode: 401,
+              body: {
+                status: 'error',
+                message: 'Usuário ou perfil não encontrado.',
+              },
+            };
+          }
+
+          const activeAccessToken = app.jwt.sign(
+            {
+              sub: user.id,
+              role: user.role,
+              persona: profile.persona,
+              tv: user.tokenVersion,
+            },
+            { expiresIn: '15m' },
+          );
+
+          const successorRefreshToken = crypto.randomBytes(32).toString('hex');
+          const successorRefreshTokenHash = crypto
+            .createHash('sha256')
+            .update(successorRefreshToken)
+            .digest('hex');
+
           await tx
             .update(sessions)
-            .set({ revokedAt: new Date() })
-            .where(and(eq(sessions.userId, session.userId), isNull(sessions.revokedAt)));
+            .set({ refreshTokenHash: successorRefreshTokenHash })
+            .where(eq(sessions.id, successorSession.id));
+
+          recentRotations.set(session.id, {
+            accessToken: activeAccessToken,
+            refreshToken: successorRefreshToken,
+            expiresAt: Date.now() + 15 * 1000,
+          });
 
           return {
-            statusCode: 401,
+            statusCode: 200,
             body: {
-              status: 'error',
-              message: 'Tentativa de reúso de refresh token detectada.',
+              status: 'success',
+              data: {
+                accessToken: activeAccessToken,
+                refreshToken: successorRefreshToken,
+              },
             },
           };
         }
 
-        // Checar expiração
-        if (new Date() > new Date(session.expiresAt)) {
-          return {
-            statusCode: 401,
-            body: {
-              status: 'error',
-              message: 'Refresh token expirado.',
-            },
-          };
-        }
-
-        // Se a sessão for válida (ativa):
-        const [user] = await tx
-          .select()
-          .from(users)
-          .where(eq(users.id, session.userId))
-          .limit(1);
-
-        const [profile] = await tx
-          .select()
-          .from(profiles)
-          .where(eq(profiles.accountToken, deriveAccountToken(session.userId)))
-          .limit(1);
-
-        if (!user || !profile) {
-          return {
-            statusCode: 401,
-            body: {
-              status: 'error',
-              message: 'Usuário ou perfil não encontrado.',
-            },
-          };
-        }
-
-        const newRefreshToken = crypto.randomBytes(32).toString('hex');
-        const newRefreshTokenHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
-
-        // Criar nova sessão em auth_security.sessions
-        const [newSession] = await tx
-          .insert(sessions)
-          .values({
-            userId: user.id,
-            refreshTokenHash: newRefreshTokenHash,
-            expiresAt,
-          })
-          .returning({ id: sessions.id });
-
-        if (!newSession) {
-          throw new Error('Falha ao criar nova sessão.');
-        }
-
-        // Atualizar sessão atual: revokedAt = NOW() e rotatedToSessionId = newSession.id
+        // Se elapsedSeconds > 10: Violação real de segurança (reúso tardio).
+        // Revogar imediatamente todas as sessões ativas do usuário e retornar HTTP 401.
         await tx
           .update(sessions)
-          .set({
-            revokedAt: new Date(),
-            rotatedToSessionId: newSession.id,
-          })
-          .where(eq(sessions.id, session.id));
-
-        const newAccessToken = app.jwt.sign(
-          {
-            sub: user.id,
-            role: user.role,
-            persona: profile.persona,
-            tv: user.tokenVersion,
-          },
-          { expiresIn: '15m' },
-        );
-
-        recentRotations.set(session.id, {
-          accessToken: newAccessToken,
-          refreshToken: newRefreshToken,
-          expiresAt: Date.now() + 15 * 1000,
-        });
+          .set({ revokedAt: new Date() })
+          .where(and(eq(sessions.userId, session.userId), isNull(sessions.revokedAt)));
 
         return {
-          statusCode: 200,
+          statusCode: 401,
           body: {
-            status: 'success',
-            data: {
-              accessToken: newAccessToken,
-              refreshToken: newRefreshToken,
-            },
+            status: 'error',
+            message: 'Tentativa de reúso de refresh token detectada.',
           },
         };
+      }
+
+      // Checar expiração
+      if (new Date() > new Date(session.expiresAt)) {
+        return {
+          statusCode: 401,
+          body: {
+            status: 'error',
+            message: 'Refresh token expirado.',
+          },
+        };
+      }
+
+      // Se a sessão for válida (ativa):
+      const [user] = await tx.select().from(users).where(eq(users.id, session.userId)).limit(1);
+
+      const [profile] = await tx
+        .select()
+        .from(profiles)
+        .where(eq(profiles.accountToken, deriveAccountToken(session.userId)))
+        .limit(1);
+
+      if (!user || !profile) {
+        return {
+          statusCode: 401,
+          body: {
+            status: 'error',
+            message: 'Usuário ou perfil não encontrado.',
+          },
+        };
+      }
+
+      const newRefreshToken = crypto.randomBytes(32).toString('hex');
+      const newRefreshTokenHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
+
+      // Criar nova sessão em auth_security.sessions
+      const [newSession] = await tx
+        .insert(sessions)
+        .values({
+          userId: user.id,
+          refreshTokenHash: newRefreshTokenHash,
+          expiresAt,
+        })
+        .returning({ id: sessions.id });
+
+      if (!newSession) {
+        throw new Error('Falha ao criar nova sessão.');
+      }
+
+      // Atualizar sessão atual: revokedAt = NOW() e rotatedToSessionId = newSession.id
+      await tx
+        .update(sessions)
+        .set({
+          revokedAt: new Date(),
+          rotatedToSessionId: newSession.id,
+        })
+        .where(eq(sessions.id, session.id));
+
+      const newAccessToken = app.jwt.sign(
+        {
+          sub: user.id,
+          role: user.role,
+          persona: profile.persona,
+          tv: user.tokenVersion,
+        },
+        { expiresIn: '15m' },
+      );
+
+      recentRotations.set(session.id, {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        expiresAt: Date.now() + 15 * 1000,
       });
 
-      return reply.status(result.statusCode).send(result.body);
-    } catch (error: unknown) {
-      throw error;
-    }
+      return {
+        statusCode: 200,
+        body: {
+          status: 'success',
+          data: {
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken,
+          },
+        },
+      };
+    });
+
+    return reply.status(result.statusCode).send(result.body);
   });
 
   // POST /logout
@@ -928,39 +920,34 @@ export const deleteAccountHandler = async (request: FastifyRequest, reply: Fasti
   const userId = request.user.sub;
   const accountToken = deriveAccountToken(userId);
 
-  try {
-    await db.transaction(async (tx) => {
-      // 1. Buscar o perfil pelo accountToken para obter o profileId
-      const [profile] = await tx
-        .select({ id: profiles.id })
-        .from(profiles)
-        .where(eq(profiles.accountToken, accountToken))
-        .limit(1);
+  await db.transaction(async (tx) => {
+    // 1. Buscar o perfil pelo accountToken para obter o profileId
+    const [profile] = await tx
+      .select({ id: profiles.id })
+      .from(profiles)
+      .where(eq(profiles.accountToken, accountToken))
+      .limit(1);
 
-      // 2. Deletar todos os check-ins associados ao profileId em recovery_core.checkins
-      if (profile) {
-        await tx.delete(checkins).where(eq(checkins.profileId, profile.id));
-        // 3. Deletar o perfil em recovery_core.profiles
-        await tx.delete(profiles).where(eq(profiles.id, profile.id));
-      }
+    // 2. Deletar todos os check-ins associados ao profileId em recovery_core.checkins
+    if (profile) {
+      await tx.delete(checkins).where(eq(checkins.profileId, profile.id));
+      // 3. Deletar o perfil em recovery_core.profiles
+      await tx.delete(profiles).where(eq(profiles.id, profile.id));
+    }
 
-      // 4. Deletar todas as sessões em auth_security.sessions para o userId
-      await tx.delete(sessions).where(eq(sessions.userId, userId));
+    // 4. Deletar todas as sessões em auth_security.sessions para o userId
+    await tx.delete(sessions).where(eq(sessions.userId, userId));
 
-      // 5. Deletar os consentimentos em auth_security.consents
-      await tx.delete(consents).where(eq(consents.userId, userId));
+    // 5. Deletar os consentimentos em auth_security.consents
+    await tx.delete(consents).where(eq(consents.userId, userId));
 
-      // 6. Deletar o usuário em auth_security.users
-      await tx.delete(users).where(eq(users.id, userId));
-    });
+    // 6. Deletar o usuário em auth_security.users
+    await tx.delete(users).where(eq(users.id, userId));
+  });
 
-    return reply.status(200).send({
-      status: 'success',
-      message:
-        'Conta e dados associados foram expurgados definitivamente em conformidade com o Art. 18, VI da LGPD.',
-    });
-  } catch (error: unknown) {
-    throw error;
-  }
+  return reply.status(200).send({
+    status: 'success',
+    message:
+      'Conta e dados associados foram expurgados definitivamente em conformidade com o Art. 18, VI da LGPD.',
+  });
 };
-

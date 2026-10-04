@@ -7,7 +7,13 @@ import type {
   ApiSuccessResponse,
   Persona,
 } from '../types/auth';
-import { apiFetch, recoverAccountApi, deleteAccountApi, setOnAuthFailureCallback, ApiError } from '../services/api';
+import {
+  apiFetch,
+  recoverAccountApi,
+  deleteAccountApi,
+  setOnAuthFailureCallback,
+  ApiError,
+} from '../services/api';
 import { storage } from '../services/storage';
 
 interface PendingRecoverySession {
@@ -36,7 +42,7 @@ interface AuthContextData {
   completeAccountRecovery: () => Promise<void>;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
-  acknowledgeIdentity: () => void;
+  acknowledgeIdentity: () => Promise<void> | void;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -92,6 +98,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await storage.setItem('cachedUser', JSON.stringify(response.data.user));
           await storage.setItem('cachedProfile', JSON.stringify(response.data.profile));
         }
+
+        const pendingKey = await storage.getItem('pendingKeyReveal');
+        if (pendingKey) {
+          setRecoveryKey(pendingKey);
+          setJustRegistered(true);
+        }
       } catch (error) {
         // Limpar storage estritamente em caso de HTTP 401 explícito da API
         if (error instanceof ApiError && error.status === 401) {
@@ -99,8 +111,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await storage.removeItem('refreshToken');
           await storage.removeItem('cachedUser');
           await storage.removeItem('cachedProfile');
+          await storage.removeItem('pendingKeyReveal');
           setUser(null);
           setProfile(null);
+          setRecoveryKey(null);
+          setJustRegistered(false);
         }
         // Se for erro genérico de rede (status 0) ou erro 5xx do servidor,
         // NUNCA apagar tokens do storage!
@@ -158,6 +173,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     await storage.setItem('cachedUser', JSON.stringify(registeredUser));
     await storage.setItem('cachedProfile', JSON.stringify(registeredProfile));
+
+    if (returnedRecoveryKey) {
+      await storage.setItem('pendingKeyReveal', returnedRecoveryKey);
+    }
 
     setUser(registeredUser);
     setProfile(registeredProfile);
@@ -237,6 +256,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await storage.removeItem('refreshToken');
       await storage.removeItem('cachedUser');
       await storage.removeItem('cachedProfile');
+      await storage.removeItem('pendingKeyReveal');
       setUser(null);
       setProfile(null);
       setRecoveryKey(null);
@@ -253,6 +273,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await storage.removeItem('refreshToken');
     await storage.removeItem('cachedUser');
     await storage.removeItem('cachedProfile');
+    await storage.removeItem('pendingKeyReveal');
     setUser(null);
     setProfile(null);
     setRecoveryKey(null);
@@ -260,7 +281,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPendingRecovery(null);
   };
 
-  const acknowledgeIdentity = () => {
+  const acknowledgeIdentity = async () => {
+    await storage.removeItem('pendingKeyReveal');
     setJustRegistered(false);
     setRecoveryKey(null);
   };

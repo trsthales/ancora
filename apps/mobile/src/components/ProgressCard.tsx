@@ -7,10 +7,7 @@ interface ProgressCardProps {
   isLoading?: boolean;
 }
 
-export const ProgressCard: React.FC<ProgressCardProps> = ({
-  totalCheckins,
-  isLoading = false,
-}) => {
+export const ProgressCard: React.FC<ProgressCardProps> = ({ totalCheckins, isLoading = false }) => {
   const { colors, theme } = useTheme();
   const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
 
@@ -55,7 +52,7 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
       <View style={styles.footerNote}>
         <View style={styles.gentleDot} />
         <Text style={styles.footerText}>
-          Sem streaks punitivos ou cobrança de sequências. O que importa é você estar aqui agora.
+          Sem cobrança de dias seguidos ou metas rígidas. O que importa é você estar aqui agora.
         </Text>
       </View>
     </View>

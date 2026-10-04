@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, StatusBar, ActivityIndicator } from 'react-native';
 import { registerRootComponent } from 'expo';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { SOSProvider, useSOS } from './src/contexts/SOSContext';
@@ -32,7 +33,7 @@ function MainNavigator() {
           ]}
         >
           <Text style={styles.loadingIcon}>⚓</Text>
-          <Text style={[styles.loadingTitle, { color: colors.text }]}>Âncora</Text>
+          <Text style={[styles.loadingTitle, { color: colors.text }]}>Jornada Firme</Text>
           <Text style={[styles.loadingSlogan, { color: colors.textMuted }]}>
             Firmeza para atravessar a tempestade.
           </Text>
@@ -106,13 +107,15 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <SOSProvider>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-      </SOSProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <SOSProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </SOSProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 

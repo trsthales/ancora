@@ -13,7 +13,7 @@ export const rotateIdentitySchema = z.object({
       errorMap: () => ({ message: 'Avatar selecionado inválido.' }),
     })
     .optional(),
-  regeneratePseudonym: z.boolean().default(true),
+  regeneratePseudonym: z.boolean().default(false),
 });
 
 export type RotateIdentityInput = z.infer<typeof rotateIdentitySchema>;
@@ -91,97 +91,93 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
     const { avatarId, regeneratePseudonym } = parseResult.data;
     const userId = request.user.sub;
 
-    try {
-      const result = await db.transaction(async (tx) => {
-        const [currentProfile] = await tx
-          .select()
-          .from(profiles)
-          .where(eq(profiles.accountToken, deriveAccountToken(userId)))
-          .for('update')
-          .limit(1);
+    const result = await db.transaction(async (tx) => {
+      const [currentProfile] = await tx
+        .select()
+        .from(profiles)
+        .where(eq(profiles.accountToken, deriveAccountToken(userId)))
+        .for('update')
+        .limit(1);
 
-        if (!currentProfile) {
-          return { error: 404, message: 'Perfil não encontrado.' };
-        }
-
-        let newPseudonym: string | undefined;
-
-        if (regeneratePseudonym) {
-          newPseudonym = await generateAvailablePseudonym(tx);
-
-          // 1. Inserir o pseudônimo antigo na quarentena por 30 dias
-          const quarantinedUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-          await tx
-            .insert(quarantinedPseudonyms)
-            .values({
-              pseudonym: currentProfile.pseudonym,
-              quarantinedUntil,
-            })
-            .onConflictDoUpdate({
-              target: quarantinedPseudonyms.pseudonym,
-              set: { quarantinedUntil },
-            });
-
-          // 2. Atualizar atomicamente o loginToken na tabela users
-          const newLoginToken = deriveLoginToken(newPseudonym);
-          await tx
-            .update(users)
-            .set({
-              loginToken: newLoginToken,
-              updatedAt: new Date(),
-            })
-            .where(eq(users.id, userId));
-        }
-
-        const updateData: {
-          pseudonym?: string;
-          avatarId?: string;
-          lastSeenAt?: Date;
-        } = {
-          lastSeenAt: new Date(),
-        };
-
-        if (newPseudonym) {
-          updateData.pseudonym = newPseudonym;
-        }
-
-        if (avatarId) {
-          updateData.avatarId = avatarId;
-        }
-
-        const [updatedProfile] = await tx
-          .update(profiles)
-          .set(updateData)
-          .where(eq(profiles.id, currentProfile.id))
-          .returning();
-
-        return { success: true, updatedProfile };
-      });
-
-      if ('error' in result && result.error) {
-        return reply.status(result.error).send({
-          status: 'error',
-          message: result.message,
-        });
+      if (!currentProfile) {
+        return { error: 404, message: 'Perfil não encontrado.' };
       }
 
-      const { updatedProfile } = result as { updatedProfile: typeof profiles.$inferSelect };
+      let newPseudonym: string | undefined;
 
-      return reply.status(200).send({
-        status: 'success',
-        message: 'Identidade comunitária renovada com sucesso.',
-        data: {
-          profile: {
-            id: updatedProfile.id,
-            pseudonym: updatedProfile.pseudonym,
-            avatarId: updatedProfile.avatarId,
-            persona: updatedProfile.persona,
-            updatedAt: new Date().toISOString(),
-          },
-        },
+      if (regeneratePseudonym) {
+        newPseudonym = await generateAvailablePseudonym(tx);
+
+        // 1. Inserir o pseudônimo antigo na quarentena por 30 dias
+        const quarantinedUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        await tx
+          .insert(quarantinedPseudonyms)
+          .values({
+            pseudonym: currentProfile.pseudonym,
+            quarantinedUntil,
+          })
+          .onConflictDoUpdate({
+            target: quarantinedPseudonyms.pseudonym,
+            set: { quarantinedUntil },
+          });
+
+        // 2. Atualizar atomicamente o loginToken na tabela users
+        const newLoginToken = deriveLoginToken(newPseudonym);
+        await tx
+          .update(users)
+          .set({
+            loginToken: newLoginToken,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, userId));
+      }
+
+      const updateData: {
+        pseudonym?: string;
+        avatarId?: string;
+        lastSeenAt?: Date;
+      } = {
+        lastSeenAt: new Date(),
+      };
+
+      if (newPseudonym) {
+        updateData.pseudonym = newPseudonym;
+      }
+
+      if (avatarId) {
+        updateData.avatarId = avatarId;
+      }
+
+      const [updatedProfile] = await tx
+        .update(profiles)
+        .set(updateData)
+        .where(eq(profiles.id, currentProfile.id))
+        .returning();
+
+      return { success: true, updatedProfile };
+    });
+
+    if ('error' in result && result.error) {
+      return reply.status(result.error).send({
+        status: 'error',
+        message: result.message,
       });
-    } catch (error: unknown) {
-      throw error;
     }
+
+    const { updatedProfile } = result as { updatedProfile: typeof profiles.$inferSelect };
+
+    return reply.status(200).send({
+      status: 'success',
+      message: 'Identidade comunitária renovada com sucesso.',
+      data: {
+        profile: {
+          id: updatedProfile.id,
+          pseudonym: updatedProfile.pseudonym,
+          avatarId: updatedProfile.avatarId,
+          persona: updatedProfile.persona,
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    });
   });
 };

@@ -5,10 +5,7 @@ export const CROCKFORD_BASE32_CHARSET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
 export function deriveAccountToken(userId: string): string {
   const pepper = env.APP_PEPPER_V1 || env.APP_PEPPER_SECRET;
-  return crypto
-    .createHmac('sha256', pepper)
-    .update(userId)
-    .digest('hex');
+  return crypto.createHmac('sha256', pepper).update(userId).digest('hex');
 }
 
 /**
@@ -17,10 +14,7 @@ export function deriveAccountToken(userId: string): string {
 export function deriveLoginToken(pseudonym: string): string {
   const pepper = env.APP_PEPPER_V1 || env.APP_PEPPER_SECRET;
   const normalized = pseudonym.trim().toLowerCase();
-  return crypto
-    .createHmac('sha256', pepper)
-    .update(normalized)
-    .digest('hex');
+  return crypto.createHmac('sha256', pepper).update(normalized).digest('hex');
 }
 
 /**
@@ -70,10 +64,5 @@ export function generateRecoveryKey(): string {
  */
 export function hashRecoveryKey(key: string): string {
   const normalized = normalizeRecoveryKey(key);
-  return crypto
-    .createHash('sha256')
-    .update(normalized)
-    .digest('hex');
+  return crypto.createHash('sha256').update(normalized).digest('hex');
 }
-
-

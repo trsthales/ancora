@@ -257,4 +257,3 @@ export async function deleteAccountApi(): Promise<{ status: string; message: str
     method: 'DELETE',
   });
 }
-

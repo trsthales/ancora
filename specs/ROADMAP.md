@@ -30,7 +30,7 @@
 - [x] **PostgreSQL 16 Multi-Schema:** Schemas isolados `auth_security`, `recovery_core` e `pgboss` via Docker Compose.
 - [x] **Drizzle ORM & Runbook de Migrations:** Esteira canônica de migrations com nomes semânticos e histórico auditável.
 - [x] **Filas Assíncronas no Postgres:** Configuração do `pg-boss` para processamento em background (Zero Redis no MVP).
-- [x] **Pino Logger com Redaction:** Mascaramento automático de senhas, e-mails, tokens, IPs e dados de saúde.
+- [x] **Pino Logger com Redaction:** Mascaramento automático de senhas, tokens, IPs e dados de saúde.
 
 ---
 
@@ -55,8 +55,8 @@
 ## FASE 2.5 / SPRINT 3.5: Hardening de Segurança, Zero-PII e Concorrência — [✅ CONCLUÍDA]
 
 - [x] **Arquitetura Zero-PII:** Remoção definitiva da coluna e do campo de e-mail no cadastro. Login por Pseudônimo.
-- [x] **Chave Mestra de Recuperação (Crockford Base32):** 20 caracteres sem ambiguidade (`ANCORA-XXXXX-...`) com normalizador tolerante.
-- [x] **Desacoplamento Criptográfico HMAC:** Eliminação da Foreign Key física no banco; correlação temporal neutralizada por truncamento de timestamp.
+- [x] **Chave Mestra de Recuperação (Crockford Base32):** 20 caracteres sem ambiguidade (`FIRME-XXXXX-...`) com normalizador tolerante.
+- [x] **Desacoplamento Criptográfico HMAC:** Eliminação da Foreign Key física no banco; correlação temporal neutralizada por truncamento de timestamp e `last_seen_at` inicializado como `NULL`.
 - [x] **Rate Limiting de Dois Baldes:** 100 req/min por IP para proteger clínicas de reabilitação/NAT + bloqueio de 5 falhas por pseudônimo.
 - [x] **RTR Idempotente & Mutex no Mobile:** Grace Period de 10s contra retries 4G e fila única de refresh no client mobile.
 - [x] **Governança LGPD Efetiva:** Tabela `consents` (Art. 11), exclusão transacional atômica `DELETE /account` (Art. 18, VI) e proteção contra Log Poisoning.
@@ -66,8 +66,8 @@
 
 ## FASE 3 / SPRINT 4: O Painel Vivo e Mecânicas Sociais Saudáveis (Semanas 7-8) — [🚀 PRÓXIMA]
 
-- [ ] **TASK-401: Criptografia AES-256-GCM do Plano Pessoal Pré-Crise:** Criptografia em repouso com IV de 12 bytes e Auth Tag de 16 bytes na tabela `emergency_plans`.
-- [ ] **TASK-402: Gestão de 1 a 3 Micro-Hábitos Diários:** Definição e conclusão diária sem streaks punitivos.
+- [ ] **TASK-401: Criptografia AES-256-GCM do Plano Pessoal Pré-Crise:** Criptografia em repouso com IV de 12 bytes, Auth Tag de 16 bytes e AAD na tabela `emergency_plans`.
+- [ ] **TASK-402: Gestão de 1 a 3 Micro-Hábitos Diários:** Definição e conclusão diária sem cobrança de dias seguidos ou metas rígidas.
 - [ ] **TASK-403: Backend do Feed sob a Tríade Semântica:** Modelo de dados `triad_posts` (`FAÇO`, `EVITO`, `ME AJUDA`), sanitização geográfica e rate limit.
 - [ ] **TASK-404: Microação "Vou Tentar Isso":** Salvar estratégias em `my_tools` e notificação assíncrona para o autor via `pg-boss`.
 - [ ] **TASK-405: Interface do Feed Mobile:** Componentes visuais da Tríade sem likes ou rankings de vaidade.
@@ -76,10 +76,10 @@
 
 ## FASE 4 / SPRINT 5: Moderação, Presença Silenciosa e Rodas de Texto (Semanas 9-10)
 
-- [ ] **TASK-501: Presença Silenciosa (Body Doubling):** Indicador de usuários ativos com regra de threshold ($\ge 15$).
+- [ ] **TASK-501: Presença Silenciosa (Body Doubling) via Postgres:** Indicador de usuários ativos com regra de threshold ($\ge 15$).
 - [ ] **TASK-502: Interceptação Ativa de Ideação Autolítica:** Bloqueio pré-publicação de termos de autolesão com redirecionamento para CVV 188.
-- [ ] **TASK-503: Painel Web de Moderação (React + Vite):** Triagem de quarentena de novos usuários, denúncias e curadoria da "Estratégia da Semana".
-- [ ] **TASK-504: Rodas de Apoio Agendadas em Texto (WebSockets):** Salas de escuta temporárias com limite de 20 conexões simultâneas e mensagens efêmeras.
+- [ ] **TASK-503: Painel Web de Moderação (React + Vite + Tailwind):** Triagem de quarentena de novos usuários, denúncias e curadoria da "Estratégia da Semana".
+- [ ] **TASK-504: Salas de Apoio Agendadas em Texto (WebSockets):** Salas de escuta temporárias com limite de 20 conexões simultâneas e mensagens efêmeras.
 
 ---
 
@@ -94,11 +94,11 @@
 
 ## 📋 Resumo da Alocação de Componentes (Stack Consolidada)
 
-| Componente | Tecnologia | Papel no Sistema |
-| :--- | :--- | :--- |
-| **Mobile App** | React Native (Expo) | Interface do usuário (iOS, Android e Web), SOS offline deslogado e client mutex. |
-| **Painel Admin** | React (Vite) + Tailwind | Gestão de moderação, quarentena e denúncias. |
-| **Backend API** | Node.js (TypeScript) + Fastify | Regras de negócio, autenticação Zero-PII, WebSockets e API REST. |
-| **Banco de Dados** | PostgreSQL 16+ | Schemas segregados (`auth_security`, `recovery_core`, `pgboss`) com HMAC e sem FK direta. |
-| **Filas e Jobs** | `pg-boss` (Postgres nativo) | Notificações de ferramentas e alertas de crise sem Redis. |
-| **Criptografia** | Argon2id + HMAC-SHA256 + AES-256-GCM | Proteção de credenciais, derivação de identidade e dados em repouso. |
+| Componente         | Tecnologia                           | Papel no Sistema                                                                          |
+| :----------------- | :----------------------------------- | :---------------------------------------------------------------------------------------- |
+| **Mobile App**     | React Native (Expo)                  | Interface do usuário (iOS, Android e Web), SOS offline deslogado e client mutex.          |
+| **Painel Admin**   | React (Vite) + Tailwind              | Gestão de moderação, quarentena e denúncias.                                              |
+| **Backend API**    | Node.js (TypeScript) + Fastify       | Regras de negócio, autenticação Zero-PII, WebSockets e API REST.                          |
+| **Banco de Dados** | PostgreSQL 16+                       | Schemas segregados (`auth_security`, `recovery_core`, `pgboss`) com HMAC e sem FK direta. |
+| **Filas e Jobs**   | `pg-boss` (Postgres nativo)          | Notificações de ferramentas e alertas de crise sem Redis.                                 |
+| **Criptografia**   | Argon2id + HMAC-SHA256 + AES-256-GCM | Proteção de credenciais, derivação de identidade e dados em repouso.                      |

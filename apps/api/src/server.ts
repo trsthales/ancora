@@ -21,9 +21,7 @@ export function isDatabaseError(err: unknown): boolean {
   const constructorName = err.constructor?.name ?? '';
   const hasQueryOrParams = 'query' in errorObj || 'params' in errorObj;
   const isCauseDbError =
-    errorObj.cause && typeof errorObj.cause === 'object'
-      ? isDatabaseError(errorObj.cause)
-      : false;
+    errorObj.cause && typeof errorObj.cause === 'object' ? isDatabaseError(errorObj.cause) : false;
 
   return (
     err instanceof DrizzleQueryError ||

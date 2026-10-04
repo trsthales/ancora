@@ -11,26 +11,47 @@ export interface ThemeColors {
   textMuted: string;
   primary: string;
   primaryText: string;
+  accent: string;
+  brandJornada: string;
+  brandFirme: string;
+  brandSun: string;
+  brandMuted: string;
+  hillBack: string;
+  hillFront: string;
 }
 
 export const darkColors: ThemeColors = {
-  background: '#0f172a',
+  background: '#131c2e',
   card: '#1e293b',
-  cardBorder: '#334155',
+  cardBorder: '#2e3d54',
   text: '#f8fafc',
   textMuted: '#94a3b8',
-  primary: '#0d9488',
+  primary: '#14b8a6',
   primaryText: '#ffffff',
+  accent: '#fbbf24',
+  brandJornada: '#f1f5f9',
+  brandFirme: '#5eead4',
+  brandSun: '#fbbf24',
+  brandMuted: '#94a3b8',
+  hillBack: 'rgba(20, 184, 166, 0.07)',
+  hillFront: 'rgba(94, 234, 212, 0.05)',
 };
 
 export const lightColors: ThemeColors = {
-  background: '#f8fafc',
+  background: '#fbfaf7',
   card: '#ffffff',
-  cardBorder: '#e2e8f0',
-  text: '#0f172a',
+  cardBorder: '#e8e5de',
+  text: '#1e293b',
   textMuted: '#64748b',
-  primary: '#0f766e',
+  primary: '#0d9488',
   primaryText: '#ffffff',
+  accent: '#f59e0b',
+  brandJornada: '#17404c',
+  brandFirme: '#386d62',
+  brandSun: '#f59e0b',
+  brandMuted: '#4e6a72',
+  hillBack: 'rgba(13, 148, 136, 0.06)',
+  hillFront: 'rgba(56, 109, 98, 0.08)',
 };
 
 const THEME_STORAGE_KEY = 'ancora_theme';
@@ -43,16 +64,16 @@ export interface ThemeContextData {
 }
 
 const defaultContext: ThemeContextData = {
-  theme: 'dark',
+  theme: 'light',
   toggleTheme: () => {},
   setTheme: () => {},
-  colors: darkColors,
+  colors: lightColors,
 };
 
 const ThemeContext = createContext<ThemeContextData>(defaultContext);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<ThemeMode>('dark');
+  const [theme, setThemeState] = useState<ThemeMode>('light');
 
   useEffect(() => {
     async function restoreTheme() {
@@ -62,7 +83,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setThemeState(storedTheme);
         }
       } catch {
-        // Fallback para 'dark' em caso de erro no storage
+        // Fallback para 'light' em caso de erro no storage
       }
     }
 
