@@ -54,6 +54,8 @@
 
 ## FASE 2.5 / SPRINT 3.5: Hardening de Segurança, Zero-PII e Concorrência — [✅ CONCLUÍDA]
 
+> **Especificação Canônica:** Veja o documento detalhado em [specs/SPEC-SPRINT-03.5-DEBT-HARDENING-E-LGPD.md](file:///home/thales/Projetos/Ancora/specs/SPEC-SPRINT-03.5-DEBT-HARDENING-E-LGPD.md).
+
 - [x] **Arquitetura Zero-PII:** Remoção definitiva da coluna e do campo de e-mail no cadastro. Login por Pseudônimo.
 - [x] **Chave Mestra de Recuperação (Crockford Base32):** 20 caracteres sem ambiguidade (`FIRME-XXXXX-...`) com normalizador tolerante.
 - [x] **Desacoplamento Criptográfico HMAC:** Eliminação da Foreign Key física no banco; correlação temporal neutralizada por truncamento de timestamp e `last_seen_at` inicializado como `NULL`.
