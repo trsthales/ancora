@@ -62,10 +62,11 @@ export const loggerConfig: FastifyServerOptions['logger'] = {
     censor: '[Redacted]',
   },
   serializers: {
-    err: (err: any) => {
-      const errorObj = err && typeof err === 'object' ? err : {};
+    err: (err: unknown) => {
+      const errorObj = err && typeof err === 'object' ? (err as Record<string, unknown>) : {};
       const name = String(errorObj.name || 'Error');
-      const constructorName = err?.constructor?.name ?? '';
+      const constructorName =
+        (err as { constructor?: { name?: string } } | null | undefined)?.constructor?.name ?? '';
       const causeObj =
         errorObj.cause && typeof errorObj.cause === 'object'
           ? (errorObj.cause as Record<string, unknown>)
@@ -80,29 +81,30 @@ export const loggerConfig: FastifyServerOptions['logger'] = {
         'params' in errorObj ||
         Boolean(
           causeObj &&
-            ('query' in causeObj ||
-              'params' in causeObj ||
-              causeObj.name === 'PostgresError' ||
-              causeObj.name === 'DrizzleQueryError'),
+          ('query' in causeObj ||
+            'params' in causeObj ||
+            causeObj.name === 'PostgresError' ||
+            causeObj.name === 'DrizzleQueryError'),
         );
 
       if (isDb) {
         const code = (errorObj.code || causeObj?.code) as string | undefined;
-        const finalName =
-          name === 'Error' ? ((causeObj?.name as string) || 'PostgresError') : name;
+        const finalName = name === 'Error' ? (causeObj?.name as string) || 'PostgresError' : name;
         return {
-          code,
+          type: finalName,
           name: finalName,
+          code,
           message: 'Falha na execução da query de banco de dados',
+          stack: '',
         };
       }
 
       return {
-        type: errorObj.type || errorObj.name || 'Error',
-        name: errorObj.name || 'Error',
-        message: errorObj.message || 'Error',
-        stack: errorObj.stack || '',
         ...errorObj,
+        type: String(errorObj.type || errorObj.name || 'Error'),
+        name: String(errorObj.name || 'Error'),
+        message: String(errorObj.message || 'Error'),
+        stack: String(errorObj.stack || ''),
       };
     },
   },

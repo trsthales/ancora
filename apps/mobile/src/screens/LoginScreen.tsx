@@ -144,9 +144,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             >
               <Text style={styles.forgotPasswordText}>
                 Esqueceu a senha?{' '}
-                <Text style={styles.forgotPasswordHighlight}>
-                  Recuperar com Chave Mestra
-                </Text>
+                <Text style={styles.forgotPasswordHighlight}>Recuperar com Chave Mestra</Text>
               </Text>
             </TouchableOpacity>
 

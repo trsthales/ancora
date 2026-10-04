@@ -185,7 +185,8 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                 {healthDataConsent && <Text style={styles.checkmark}>✓</Text>}
               </View>
               <Text style={styles.checkboxLabel}>
-                Concordo com o tratamento dos meus registros de recuperação e saúde exclusivamente para o suporte comunitário e proteção deste aplicativo (Art. 11 da LGPD).
+                Concordo com o tratamento dos meus registros de recuperação e saúde exclusivamente
+                para o suporte comunitário e proteção deste aplicativo (Art. 11 da LGPD).
               </Text>
             </TouchableOpacity>
 
@@ -233,10 +234,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
       </KeyboardAvoidingView>
 
       {/* Modal com Síntese dos Termos e Política de Privacidade v2026.1 */}
-      <TermsModal
-        visible={isTermsModalOpen}
-        onClose={() => setIsTermsModalOpen(false)}
-      />
+      <TermsModal visible={isTermsModalOpen} onClose={() => setIsTermsModalOpen(false)} />
     </SafeAreaView>
   );
 };

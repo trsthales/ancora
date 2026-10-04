@@ -43,9 +43,9 @@ export const journeyService = {
    * Consulta se o usuário já fez check-in no dia atual e traz o registro mais recente
    */
   async getTodayCheckin(): Promise<TodayCheckinResponse> {
-    const response = await apiFetch<{ status?: string; data?: TodayCheckinResponse } & TodayCheckinResponse>(
-      '/journey/today',
-    );
+    const response = await apiFetch<
+      { status?: string; data?: TodayCheckinResponse } & TodayCheckinResponse
+    >('/journey/today');
 
     return response.data ?? response;
   },

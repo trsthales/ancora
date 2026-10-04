@@ -14,7 +14,10 @@ const accountFailures = new Map<string, AccountFailureRecord>();
 /**
  * Verifica se a conta identificada por loginToken está bloqueada por excesso de falhas consecutivas.
  */
-export function checkAccountLock(loginToken: string): { isLocked: boolean; retryAfterSeconds: number } {
+export function checkAccountLock(loginToken: string): {
+  isLocked: boolean;
+  retryAfterSeconds: number;
+} {
   const record = accountFailures.get(loginToken);
   if (!record) {
     return { isLocked: false, retryAfterSeconds: 0 };
@@ -46,7 +49,10 @@ export function checkAccountLock(loginToken: string): { isLocked: boolean; retry
  * Registra uma tentativa falha de login para o loginToken.
  * Se atingir 5 falhas dentro de 15 minutos, bloqueia a conta por 15 minutos.
  */
-export function recordLoginFailure(loginToken: string): { isLocked: boolean; retryAfterSeconds: number } {
+export function recordLoginFailure(loginToken: string): {
+  isLocked: boolean;
+  retryAfterSeconds: number;
+} {
   const now = Date.now();
   const record = accountFailures.get(loginToken);
 

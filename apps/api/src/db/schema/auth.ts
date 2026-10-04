@@ -1,4 +1,12 @@
-import { boolean, integer, pgSchema, timestamp, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  integer,
+  pgSchema,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core';
 
 export const authSchema = pgSchema('auth_security');
 
@@ -45,4 +53,3 @@ export const consents = authSchema.table('consents', {
   consentedAt: timestamp('consented_at', { withTimezone: true }).defaultNow().notNull(),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
 });
-

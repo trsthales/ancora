@@ -32,7 +32,7 @@ function MainNavigator() {
           ]}
         >
           <Text style={styles.loadingIcon}>⚓</Text>
-          <Text style={[styles.loadingTitle, { color: colors.text }]}>Âncora</Text>
+          <Text style={[styles.loadingTitle, { color: colors.text }]}>Jornada Firme</Text>
           <Text style={[styles.loadingSlogan, { color: colors.textMuted }]}>
             Firmeza para atravessar a tempestade.
           </Text>

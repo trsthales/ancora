@@ -9,15 +9,15 @@
 
 ## Visão Geral do Cronograma
 
-| Sprint | Foco Temático | Status | Entregável Principal |
-| :---: | :--- | :---: | :--- |
-| **Sprint 1** | **Fase 0:** Setup de Monorepo, Migrations e Segregação LGPD | ✅ Concluída | Monorepo pnpm, Docker Postgres multi-schema, pg-boss e Pino logger. |
-| **Sprint 2** | **Fase 1 (A):** Autenticação 18+, Pseudonimato e Onboarding | ✅ Concluída | Cadastro com trava 18+, JWT com RTR e telas de onboarding mobile. |
-| **Sprint 3** | **Fase 1 (B) & 2 (A):** Semáforo SOS e Check-in com Alternativas | ✅ Concluída | SOS offline-first, check-in diário com interceptação e temas Claro/Escuro. |
-| **Sprint 3.5** | **Debt Hardening:** Segurança, Zero-PII & Governança LGPD | ✅ Concluída | HMAC real, Chave Crockford, Rate Limit Dual-Bucket e expurgo Art. 18, VI. |
-| **Sprint 4** | **Fase 2 (B) & 3 (A):** Hábitos, Plano Pré-Crise e Feed Tríade | 🚀 Próxima | Cripto AES-256 do plano pré-crise, micro-hábitos e Feed da Tríade. |
-| **Sprint 5** | **Fase 3 (B) & 4 (A):** Moderação, Presença Silenciosa e Rodas | ⏳ Planejada | Painel admin web, body doubling com threshold e salas de texto temporárias. |
-| **Sprint 6** | **Fase 4 (B) & 5:** Trilha Família, Pagamentos e Piloto Alpha | ⏳ Planejada | Assinatura de familiares, apoiador solidário e homologação do piloto (40 usuários). |
+|     Sprint     | Foco Temático                                                    |    Status    | Entregável Principal                                                                |
+| :------------: | :--------------------------------------------------------------- | :----------: | :---------------------------------------------------------------------------------- |
+|  **Sprint 1**  | **Fase 0:** Setup de Monorepo, Migrations e Segregação LGPD      | ✅ Concluída | Monorepo pnpm, Docker Postgres multi-schema, pg-boss e Pino logger.                 |
+|  **Sprint 2**  | **Fase 1 (A):** Autenticação 18+, Pseudonimato e Onboarding      | ✅ Concluída | Cadastro com trava 18+, JWT com RTR e telas de onboarding mobile.                   |
+|  **Sprint 3**  | **Fase 1 (B) & 2 (A):** Semáforo SOS e Check-in com Alternativas | ✅ Concluída | SOS offline-first, check-in diário com interceptação e temas Claro/Escuro.          |
+| **Sprint 3.5** | **Debt Hardening:** Segurança, Zero-PII & Governança LGPD        | ✅ Concluída | HMAC real, Chave Crockford, Rate Limit Dual-Bucket e expurgo Art. 18, VI.           |
+|  **Sprint 4**  | **Fase 2 (B) & 3 (A):** Hábitos, Plano Pré-Crise e Feed Tríade   |  🚀 Próxima  | Cripto AES-256 do plano pré-crise, micro-hábitos e Feed da Tríade.                  |
+|  **Sprint 5**  | **Fase 3 (B) & 4 (A):** Moderação, Presença Silenciosa e Rodas   | ⏳ Planejada | Painel admin web, body doubling com threshold e salas de texto temporárias.         |
+|  **Sprint 6**  | **Fase 4 (B) & 5:** Trilha Família, Pagamentos e Piloto Alpha    | ⏳ Planejada | Assinatura de familiares, apoiador solidário e homologação do piloto (40 usuários). |
 
 ---
 
@@ -34,7 +34,7 @@
 - [x] **TASK-104: Configuração da Fila de Tarefas no Postgres (`pg-boss`)**
   - Schema isolado `pgboss` com ciclo de vida integrado ao Fastify e graceful shutdown.
 - [x] **TASK-105: Logger Estruturado com Anonimização de Dados (Pino)**
-  - Mascaramento automático (*redaction*) de campos sensíveis com `[Redacted]`.
+  - Mascaramento automático (_redaction_) de campos sensíveis com `[Redacted]`.
 
 ---
 
@@ -75,7 +75,7 @@
   - SOS promovido para a raiz de `App.tsx` (funcional para usuários deslogados).
   - Blindagem do `storage.ts` com `try/catch` defensivo para telas bloqueadas no iOS.
   - Avisos de segurança contra tontura no 4-7-8 e remoção de linguagem determinista.
-  - Fim da exibição de e-mail na Home (*shoulder surfing*).
+  - Fim da exibição de e-mail na Home (_shoulder surfing_).
 - [x] **TASK-352 (Lote 2A): Desacoplamento Criptográfico no Banco**
   - Remoção física da Foreign Key direta `user_id` em `recovery_core.profiles`.
   - Vínculo efêmero via `account_token` derivado por HMAC-SHA256 com pepper versionado (`APP_PEPPER_V1`).

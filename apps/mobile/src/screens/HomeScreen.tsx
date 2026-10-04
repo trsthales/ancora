@@ -271,8 +271,9 @@ export const HomeScreen: React.FC = () => {
             </View>
           </View>
           <Text style={styles.governanceBody}>
-            Você tem total soberania sobre seus dados pessoais e de saúde. A qualquer momento, você pode
-            exercer seu Direito ao Esquecimento e solicitar o expurgo completo e irreversível da sua conta.
+            Você tem total soberania sobre seus dados pessoais e de saúde. A qualquer momento, você
+            pode exercer seu Direito ao Esquecimento e solicitar o expurgo completo e irreversível
+            da sua conta.
           </Text>
           <TouchableOpacity
             style={styles.deleteAccountButton}
@@ -325,14 +326,21 @@ export const HomeScreen: React.FC = () => {
                 <View style={styles.warningBox}>
                   <Text style={styles.warningBoxTitle}>Aviso de Irreversibilidade</Text>
                   <Text style={styles.warningBoxText}>
-                    Esta ação é definitiva. Todos os seus check-ins, dias acumulados e chaves de acesso serão expurgados imediatamente dos nossos servidores.
+                    Esta ação é definitiva. Todos os seus check-ins, dias acumulados e chaves de
+                    acesso serão expurgados imediatamente dos nossos servidores.
                   </Text>
                 </View>
 
                 <View style={styles.impactList}>
-                  <Text style={styles.impactItem}>❌ Seus registros de fissura e humor serão apagados permanentemente.</Text>
-                  <Text style={styles.impactItem}>❌ Seu pseudônimo e perfil serão deletados sem chance de restauração.</Text>
-                  <Text style={styles.impactItem}>❌ Todas as sessões e consentimentos serão revogados e destruídos.</Text>
+                  <Text style={styles.impactItem}>
+                    ❌ Seus registros de fissura e humor serão apagados permanentemente.
+                  </Text>
+                  <Text style={styles.impactItem}>
+                    ❌ Seu pseudônimo e perfil serão deletados sem chance de restauração.
+                  </Text>
+                  <Text style={styles.impactItem}>
+                    ❌ Todas as sessões e consentimentos serão revogados e destruídos.
+                  </Text>
                 </View>
 
                 <View style={styles.modalActionButtons}>
@@ -356,10 +364,14 @@ export const HomeScreen: React.FC = () => {
             ) : (
               <>
                 <View style={styles.deleteModalHeader}>
-                  <View style={[styles.warningIconBadge, { backgroundColor: 'rgba(239, 68, 68, 0.2)' }]}>
+                  <View
+                    style={[styles.warningIconBadge, { backgroundColor: 'rgba(239, 68, 68, 0.2)' }]}
+                  >
                     <Text style={styles.warningIconText}>🛑</Text>
                   </View>
-                  <Text style={[styles.deleteModalTitle, { color: '#ef4444' }]}>Confirmação Definitiva</Text>
+                  <Text style={[styles.deleteModalTitle, { color: '#ef4444' }]}>
+                    Confirmação Definitiva
+                  </Text>
                   <Text style={styles.deleteModalSubtitle}>LGPD Art. 18, VI • Etapa 2 de 2</Text>
                 </View>
 
@@ -370,7 +382,8 @@ export const HomeScreen: React.FC = () => {
                 )}
 
                 <Text style={styles.confirmPromptText}>
-                  Tem certeza absoluta de que deseja expurgar definitivamente todos os seus dados agora? Não será possível recuperar nenhum histórico.
+                  Tem certeza absoluta de que deseja expurgar definitivamente todos os seus dados
+                  agora? Não será possível recuperar nenhum histórico.
                 </Text>
 
                 <View style={styles.modalActionButtons}>

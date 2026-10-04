@@ -60,12 +60,8 @@
           "tableFrom": "sessions",
           "tableTo": "users",
           "schemaTo": "auth_security",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -163,16 +159,12 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         },
         "users_login_token_unique": {
           "name": "users_login_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "login_token"
-          ]
+          "columns": ["login_token"]
         }
       },
       "policies": {},
@@ -245,12 +237,8 @@
           "tableFrom": "checkins",
           "tableTo": "profiles",
           "schemaTo": "recovery_core",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -350,16 +338,12 @@
         "profiles_account_token_unique": {
           "name": "profiles_account_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "account_token"
-          ]
+          "columns": ["account_token"]
         },
         "profiles_pseudonym_unique": {
           "name": "profiles_pseudonym_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "pseudonym"
-          ]
+          "columns": ["pseudonym"]
         }
       },
       "policies": {},
@@ -404,9 +388,7 @@
         "quarantined_pseudonyms_pseudonym_unique": {
           "name": "quarantined_pseudonyms_pseudonym_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "pseudonym"
-          ]
+          "columns": ["pseudonym"]
         }
       },
       "policies": {},

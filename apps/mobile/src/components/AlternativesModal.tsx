@@ -51,12 +51,7 @@ export const AlternativesModal: React.FC<AlternativesModalProps> = ({
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={false}
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <StatusBar
         barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.card}
@@ -65,9 +60,7 @@ export const AlternativesModal: React.FC<AlternativesModalProps> = ({
         {/* Topo do Modal */}
         <View style={styles.header}>
           <View style={styles.badgeContainer}>
-            <Text style={styles.badgeText}>
-              Nível {cravingLevel} • Atenção Acolhedora
-            </Text>
+            <Text style={styles.badgeText}>Nível {cravingLevel} • Atenção Acolhedora</Text>
           </View>
           <TouchableOpacity
             style={styles.closeHeaderButton}
@@ -85,11 +78,10 @@ export const AlternativesModal: React.FC<AlternativesModalProps> = ({
           <View style={styles.heroSection}>
             <Text style={styles.heroIcon}>⚓</Text>
             <Text style={styles.title}>Você está atravessando um momento difícil.</Text>
-            <Text style={styles.subtitle}>
-              O que você consegue fazer nos próximos 15 minutos?
-            </Text>
+            <Text style={styles.subtitle}>O que você consegue fazer nos próximos 15 minutos?</Text>
             <Text style={styles.supportText}>
-              A fissura funciona em ondas: o ápice dura poucos minutos e depois perde força. Não precisa decidir pelo dia todo, apenas pelo momento presente.
+              A fissura funciona em ondas: o ápice dura poucos minutos e depois perde força. Não
+              precisa decidir pelo dia todo, apenas pelo momento presente.
             </Text>
           </View>
 
@@ -105,7 +97,8 @@ export const AlternativesModal: React.FC<AlternativesModalProps> = ({
               </View>
             </View>
             <Text style={styles.cardDescription}>
-              Exercícios guiados para desacelerar seus batimentos e devolver o controle ao seu corpo agora.
+              Exercícios guiados para desacelerar seus batimentos e devolver o controle ao seu corpo
+              agora.
             </Text>
             <View style={styles.buttonRow}>
               <TouchableOpacity
@@ -143,19 +136,22 @@ export const AlternativesModal: React.FC<AlternativesModalProps> = ({
               <View style={styles.tipItem}>
                 <Text style={styles.tipBullet}>💧</Text>
                 <Text style={styles.tipText}>
-                  <Text style={styles.tipBold}>Beba um copo grande de água gelada</Text> devagar, prestando atenção na temperatura.
+                  <Text style={styles.tipBold}>Beba um copo grande de água gelada</Text> devagar,
+                  prestando atenção na temperatura.
                 </Text>
               </View>
               <View style={styles.tipItem}>
                 <Text style={styles.tipBullet}>🚿</Text>
                 <Text style={styles.tipText}>
-                  <Text style={styles.tipBold}>Lave o rosto com água fria</Text> para ativar a resposta parassimpática imediata.
+                  <Text style={styles.tipBold}>Lave o rosto com água fria</Text> para ativar a
+                  resposta parassimpática imediata.
                 </Text>
               </View>
               <View style={styles.tipItem}>
                 <Text style={styles.tipBullet}>🚶</Text>
                 <Text style={styles.tipText}>
-                  <Text style={styles.tipBold}>Mude de ambiente ou caminhe</Text> até a janela para trocar o ar e a perspectiva.
+                  <Text style={styles.tipBold}>Mude de ambiente ou caminhe</Text> até a janela para
+                  trocar o ar e a perspectiva.
                 </Text>
               </View>
             </View>
@@ -173,7 +169,8 @@ export const AlternativesModal: React.FC<AlternativesModalProps> = ({
               </View>
             </View>
             <Text style={styles.cardDescription}>
-              Você não precisa passar por isso sem companhia. Há suporte humano e gratuito disponível 24h:
+              Você não precisa passar por isso sem companhia. Há suporte humano e gratuito
+              disponível 24h:
             </Text>
             <View style={styles.emergencyRow}>
               <TouchableOpacity

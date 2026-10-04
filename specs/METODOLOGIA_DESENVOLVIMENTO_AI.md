@@ -23,25 +23,25 @@ O desenvolvimento do Âncora não adota geração cega de código. A dinâmica s
 
 ## 2. Ferramentas e Ambiente de Desenvolvimento
 
-* **IDE Principal:** **Google Antigravity IDE** (para edição interativa, diffs visuais e depuração fina) e **Antigravity 2.0** (ambiente standalone para execução autônoma contínua via agente).
-* **Inspeção de Dados:** **DBeaver CE** conectado ao PostgreSQL local (`ancora_db`) para auditoria visual de schemas, constraints, foreign keys e índices.
-* **Infraestrutura Local:** Docker Compose executando PostgreSQL 16 Alpine na porta 5432 e Mailpit (SMTP/Web UI) para teste de e-mails transacionais.
-* **Gerenciador de Pacotes:** `pnpm` workspaces em monorepo:
+- **IDE Principal:** **Google Antigravity IDE** (para edição interativa, diffs visuais e depuração fina) e **Antigravity 2.0** (ambiente standalone para execução autônoma contínua via agente).
+- **Inspeção de Dados:** **DBeaver CE** conectado ao PostgreSQL local (`ancora_db`) para auditoria visual de schemas, constraints, foreign keys e índices.
+- **Infraestrutura Local:** Docker Compose executando PostgreSQL 16 Alpine na porta 5432 e Mailpit (SMTP/Web UI) para teste de e-mails transacionais.
+- **Gerenciador de Pacotes:** `pnpm` workspaces em monorepo:
   - `apps/api`: Node.js (TypeScript strict) + Fastify + Drizzle ORM.
   - `apps/mobile`: React Native com Expo (TypeScript) + React Native Web.
   - `apps/admin`: React + Vite + Tailwind CSS.
 
 ---
 
-## 3. Matriz de Roteamento de Modelos de IA (*Model Routing*)
+## 3. Matriz de Roteamento de Modelos de IA (_Model Routing_)
 
 Para maximizar a precisão técnica e manter o consumo de cota abaixo de 15% semanal no plano Google AI Pro, adotamos uma estratégia estrita de divisão de trabalho:
 
-| Modelo de IA | Modo / Thinking | Quando Utilizar (Cenários) |
-| :--- | :--- | :--- |
-| **Gemini 3.8 Flash** | **Medium** *(Padrão)* | **85% das tarefas do dia a dia:** Scaffolding de monorepo, rotas CRUD no Fastify, componentes em React Native/Expo, estilização de telas, ajustes de CSS/layout e migrations simples. Destaca-se pela velocidade extrema de streaming e execução de terminal. |
-| **Claude Sonnet** | **Thinking** *(High)* | **Tarefas de Alta Complexidade e Missões Críticas:**<br>1. Implementações criptográficas (HMAC-SHA256, AES-256-GCM, Argon2 secrets).<br>2. Auditorias de segurança ofensiva (*Red Team*), busca por *timing attacks* e *race conditions*.<br>3. Concorrência e WebSockets.<br>4. Quando o Gemini entrar em loop de autocorreção ou travar em um erro sutil de tipos. |
-| **Claude Opus** | **Padrão / Alto** | **Governança e Dilemas Estruturais:** Grandes refatorações de arquitetura, arbitragem de conformidade regulatória (LGPD / ECA Digital) ou revisões macro pré-lançamento. |
+| Modelo de IA         | Modo / Thinking       | Quando Utilizar (Cenários)                                                                                                                                                                                                                                                                                                                                           |
+| :------------------- | :-------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Gemini 3.8 Flash** | **Medium** _(Padrão)_ | **85% das tarefas do dia a dia:** Scaffolding de monorepo, rotas CRUD no Fastify, componentes em React Native/Expo, estilização de telas, ajustes de CSS/layout e migrations simples. Destaca-se pela velocidade extrema de streaming e execução de terminal.                                                                                                        |
+| **Claude Sonnet**    | **Thinking** _(High)_ | **Tarefas de Alta Complexidade e Missões Críticas:**<br>1. Implementações criptográficas (HMAC-SHA256, AES-256-GCM, Argon2 secrets).<br>2. Auditorias de segurança ofensiva (_Red Team_), busca por _timing attacks_ e _race conditions_.<br>3. Concorrência e WebSockets.<br>4. Quando o Gemini entrar em loop de autocorreção ou travar em um erro sutil de tipos. |
+| **Claude Opus**      | **Padrão / Alto**     | **Governança e Dilemas Estruturais:** Grandes refatorações de arquitetura, arbitragem de conformidade regulatória (LGPD / ECA Digital) ou revisões macro pré-lançamento.                                                                                                                                                                                             |
 
 ---
 
@@ -65,7 +65,9 @@ Todo prompt de implementação no Antigravity 2.0 deve obrigatoriamente seguir a
 ---
 
 ### 1. CONDIÇÃO DE PARADA OBRIGATÓRIA (EXIT CRITERIA)
+
 [Lista de 4 a 8 critérios verificáveis no terminal. O agente NÃO PODE finalizar antes de comprovar cada um]
+
 1. Dependências instaladas no package.json correto.
 2. Comandos de teste executados via curl com códigos HTTP esperados (ex: 200, 201, 400, 401).
 3. Verificação no banco via psql/query comprovando a alteração.
@@ -75,15 +77,18 @@ Todo prompt de implementação no Antigravity 2.0 deve obrigatoriamente seguir a
 ---
 
 ### 2. ARQUITETURA DE ARQUIVOS A CRIAR / MODIFICAR
+
 [Árvore ASCII explícita dos arquivos impactados com anotação do que muda]
 apps/api/src/
-├── db/schema/recovery.ts       (Remover coluna legada e adicionar novo token)
-└── routes/auth.ts              (Ajustar injeção do token derivado)
+├── db/schema/recovery.ts (Remover coluna legada e adicionar novo token)
+└── routes/auth.ts (Ajustar injeção do token derivado)
 
 ---
 
 ### 3. ESPECIFICAÇÃO TÉCNICA DETALHADA
+
 [Regras de negócio, assinaturas de funções TypeScript, modelos Zod, trechos SQL e regras de segurança]
+
 - Detalhes de criptografia (algoritmo, tamanho de chaves, salt/pepper).
 - Respostas de erro padronizadas (evitar enumeração de e-mails, censurar dados sensíveis).
 - Tratamento de exceções e atomicidade via transações (db.transaction).
@@ -91,7 +96,9 @@ apps/api/src/
 ---
 
 ### 4. FLUXO DE EXECUÇÃO AUTÔNOMA REQUERIDO
+
 [Passo a passo sequencial ordenado para a IA executar sem hesitar]
+
 1. Altere o schema e instale pacotes.
 2. Gere e aplique as migrations.
 3. Refatore as rotas.
@@ -109,6 +116,7 @@ apps/api/src/
 ---
 
 ### 1. CONDIÇÃO DE PARADA OBRIGATÓRIA (EXIT CRITERIA)
+
 1. Coluna `user_id` e a constraint `profiles_user_id_users_id_fk` inexistentes no PostgreSQL.
 2. Coluna `account_token` ativa, única e preenchida via HMAC determinístico no cadastro.
 3. Rota `POST /register` cadastrando o usuário e perfil sem violar constraints.
@@ -119,14 +127,16 @@ apps/api/src/
 ---
 
 ### 2. ARQUITETURA DE ARQUIVOS
+
 apps/api/src/
-├── db/schema/recovery.ts        (Atualizar: tabela profiles)
-├── lib/crypto-token.ts          (Criar: deriveAccountToken com HMAC)
-└── routes/auth.ts               (Refatorar: insert e select usando accountToken)
+├── db/schema/recovery.ts (Atualizar: tabela profiles)
+├── lib/crypto-token.ts (Criar: deriveAccountToken com HMAC)
+└── routes/auth.ts (Refatorar: insert e select usando accountToken)
 
 ---
 
 ### 3. ESPECIFICAÇÃO TÉCNICA
+
 - Usar crypto.createHmac('sha256', env.APP_PEPPER_V1).update(userId).digest('hex').
 - profiles.accountToken deve ser varchar(64).notNull().unique().
 - created_at de profiles deve truncar para hora cheia (date_trunc('hour', now())) contra correlação temporal.
@@ -134,6 +144,7 @@ apps/api/src/
 ---
 
 ### 4. FLUXO DE EXECUÇÃO
+
 1. Atualize src/lib/crypto-token.ts e src/db/schema/recovery.ts.
 2. Gere a migration via pnpm --filter @ancora/api db:generate --name decouple_account_token_lgpd.
 3. Aplique via pnpm --filter @ancora/api db:migrate.
@@ -145,10 +156,10 @@ apps/api/src/
 
 ## 6. Higiene de Git e Controle de Versão
 
-* **Uma Branch por Lote/Feature:** Nomes padronizados seguindo a convenção `tipo/escopo-descricao` (ex: `fix/sprint-3.5-lote-1-clinical-safety`).
-* **Um Commit Atômico por Prompt:** Cada prompt executado com sucesso e validado pelo engenheiro gera um commit semântico imediato:
+- **Uma Branch por Lote/Feature:** Nomes padronizados seguindo a convenção `tipo/escopo-descricao` (ex: `fix/sprint-3.5-lote-1-clinical-safety`).
+- **Um Commit Atômico por Prompt:** Cada prompt executado com sucesso e validado pelo engenheiro gera um commit semântico imediato:
   - Formato: `fix(modulo): RXX - descrição concisa da alteração`.
-* **Merge Limpo na Main:** Concluído o lote e testado o fluxo de ponta a ponta, a branch é mesclada na `main` e enviada ao GitHub remoto.
+- **Merge Limpo na Main:** Concluído o lote e testado o fluxo de ponta a ponta, a branch é mesclada na `main` e enviada ao GitHub remoto.
 
 ---
 
@@ -165,7 +176,7 @@ Qualquer IA que atue neste projeto deve respeitar obrigatoriamente as seguintes 
 3. **Semáforo SOS Offline-First:**
    - As ferramentas de contenção de crise (Respiração 4-7-8, Ancoragem 5-4-3-2-1, discagem para 188 CVV e 192 SAMU) devem funcionar sem internet e estar acessíveis na raiz do app mobile, **mesmo para usuários deslogados**.
 4. **Linguagem Clínica Responsável (RFC 002):**
-   - Proibido o uso de termos deterministas como *"Você superou este momento"* ou promessas fisiológicas sem citação científica. Utilizar linguagem de acolhimento e travessia temporária.
+   - Proibido o uso de termos deterministas como _"Você superou este momento"_ ou promessas fisiológicas sem citação científica. Utilizar linguagem de acolhimento e travessia temporária.
 5. **Cálculo de Dias Distintos na Jornada:**
    - O contador de dias acumulados deve sempre utilizar `COUNT(DISTINCT DATE(created_at))`. Múltiplos check-ins no mesmo dia registram a oscilação da fissura sem inflar a contagem de dias.
 6. **Política Anti-Enumeração:**
@@ -174,7 +185,9 @@ Qualquer IA que atue neste projeto deve respeitar obrigatoriamente as seguintes 
 ---
 
 ## 8. Procedimento de Banco de Dados (Drizzle Migrations)
+
 Conforme documentado no `RUNBOOK_MIGRATIONS.md`, as migrações seguem o modelo **Forward-Only**:
+
 - Nunca editar arquivos `.sql` já carimbados na tabela `drizzle.__drizzle_migrations`.
 - Nunca alterar o banco físico via GUI do DBeaver sem registrar migration.
 - Sempre gerar migrações com nomes semânticos via `--name`.

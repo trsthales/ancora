@@ -12,4 +12,3 @@ export async function apiRoutes(app: FastifyInstance) {
 }
 
 export { authRoutes, profileRoutes, journeyRoutes, accountRoutes };
-

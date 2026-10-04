@@ -94,11 +94,11 @@
 
 ## 📋 Resumo da Alocação de Componentes (Stack Consolidada)
 
-| Componente | Tecnologia | Papel no Sistema |
-| :--- | :--- | :--- |
-| **Mobile App** | React Native (Expo) | Interface do usuário (iOS, Android e Web), SOS offline deslogado e client mutex. |
-| **Painel Admin** | React (Vite) + Tailwind | Gestão de moderação, quarentena e denúncias. |
-| **Backend API** | Node.js (TypeScript) + Fastify | Regras de negócio, autenticação Zero-PII, WebSockets e API REST. |
-| **Banco de Dados** | PostgreSQL 16+ | Schemas segregados (`auth_security`, `recovery_core`, `pgboss`) com HMAC e sem FK direta. |
-| **Filas e Jobs** | `pg-boss` (Postgres nativo) | Notificações de ferramentas e alertas de crise sem Redis. |
-| **Criptografia** | Argon2id + HMAC-SHA256 + AES-256-GCM | Proteção de credenciais, derivação de identidade e dados em repouso. |
+| Componente         | Tecnologia                           | Papel no Sistema                                                                          |
+| :----------------- | :----------------------------------- | :---------------------------------------------------------------------------------------- |
+| **Mobile App**     | React Native (Expo)                  | Interface do usuário (iOS, Android e Web), SOS offline deslogado e client mutex.          |
+| **Painel Admin**   | React (Vite) + Tailwind              | Gestão de moderação, quarentena e denúncias.                                              |
+| **Backend API**    | Node.js (TypeScript) + Fastify       | Regras de negócio, autenticação Zero-PII, WebSockets e API REST.                          |
+| **Banco de Dados** | PostgreSQL 16+                       | Schemas segregados (`auth_security`, `recovery_core`, `pgboss`) com HMAC e sem FK direta. |
+| **Filas e Jobs**   | `pg-boss` (Postgres nativo)          | Notificações de ferramentas e alertas de crise sem Redis.                                 |
+| **Criptografia**   | Argon2id + HMAC-SHA256 + AES-256-GCM | Proteção de credenciais, derivação de identidade e dados em repouso.                      |

@@ -21,6 +21,10 @@ export const IdentityRevealScreen: React.FC = () => {
   const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
 
   const [hasCopied, setHasCopied] = useState(false);
+  const [hasEverCopied, setHasEverCopied] = useState(false);
+  const [hasSavedConfirmed, setHasSavedConfirmed] = useState(false);
+
+  const canProceed = !recoveryKey || hasEverCopied || hasSavedConfirmed;
 
   const formattedPseudonym = profile?.pseudonym
     ? profile.pseudonym.startsWith('@')
@@ -44,12 +48,14 @@ export const IdentityRevealScreen: React.FC = () => {
         await navigator.clipboard.writeText(canonicalRecoveryKey);
       }
       setHasCopied(true);
+      setHasEverCopied(true);
       setTimeout(() => setHasCopied(false), 2500);
     } catch {
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
         try {
           await navigator.clipboard.writeText(canonicalRecoveryKey);
           setHasCopied(true);
+          setHasEverCopied(true);
           setTimeout(() => setHasCopied(false), 2500);
           return;
         } catch {
@@ -57,6 +63,7 @@ export const IdentityRevealScreen: React.FC = () => {
         }
       }
       Alert.alert('Chave de Recuperação', canonicalRecoveryKey);
+      setHasEverCopied(true);
     }
   };
 
@@ -66,10 +73,7 @@ export const IdentityRevealScreen: React.FC = () => {
         barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.badgeContainer}>
           <Text style={styles.badgeText}>Identidade Gerada com Sucesso</Text>
         </View>
@@ -129,17 +133,36 @@ export const IdentityRevealScreen: React.FC = () => {
                 seguro. Se você esquecer sua senha, ela é a ÚNICA forma de recuperar seu acesso.
               </Text>
             </View>
+
+            <TouchableOpacity
+              style={styles.checkboxContainer}
+              onPress={() => setHasSavedConfirmed((prev) => !prev)}
+              activeOpacity={0.8}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: hasSavedConfirmed }}
+              accessibilityLabel="Salvei minha Chave Mestra em local seguro"
+            >
+              <View style={[styles.checkbox, hasSavedConfirmed && styles.checkboxChecked]}>
+                {hasSavedConfirmed && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.checkboxLabel}>Salvei minha Chave Mestra em local seguro</Text>
+            </TouchableOpacity>
           </View>
         ) : null}
 
         <TouchableOpacity
-          style={styles.continueButton}
+          style={[styles.continueButton, !canProceed && styles.continueButtonDisabled]}
           onPress={acknowledgeIdentity}
+          disabled={!canProceed}
           activeOpacity={0.8}
           accessibilityRole="button"
-          accessibilityLabel="Entrar no Âncora"
+          accessibilityLabel="Começar"
         >
-          <Text style={styles.continueButtonText}>Entrar no Âncora</Text>
+          <Text
+            style={[styles.continueButtonText, !canProceed && styles.continueButtonTextDisabled]}
+          >
+            Começar
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -351,11 +374,49 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
       shadowRadius: 4,
       elevation: 3,
     },
+    continueButtonDisabled: {
+      opacity: 0.45,
+      backgroundColor: theme === 'dark' ? '#1e293b' : '#cbd5e1',
+    },
     continueButtonText: {
       color: colors.primaryText,
       fontSize: 16,
       fontWeight: '600',
       letterSpacing: 0.3,
     },
+    continueButtonTextDisabled: {
+      color: colors.textMuted,
+    },
+    checkboxContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginTop: 14,
+      paddingVertical: 4,
+    },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      borderWidth: 2,
+      borderColor: colors.cardBorder,
+      backgroundColor: theme === 'dark' ? '#0f172a' : '#f8fafc',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxChecked: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    checkmark: {
+      color: colors.primaryText,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    checkboxLabel: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.text,
+      flex: 1,
+    },
   });
-

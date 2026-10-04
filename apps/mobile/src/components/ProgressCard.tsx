@@ -7,10 +7,7 @@ interface ProgressCardProps {
   isLoading?: boolean;
 }
 
-export const ProgressCard: React.FC<ProgressCardProps> = ({
-  totalCheckins,
-  isLoading = false,
-}) => {
+export const ProgressCard: React.FC<ProgressCardProps> = ({ totalCheckins, isLoading = false }) => {
   const { colors, theme } = useTheme();
   const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
 

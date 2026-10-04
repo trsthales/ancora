@@ -21,12 +21,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ visible, onClose }) => {
   const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={false}
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <StatusBar
         barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.card}
@@ -65,7 +60,9 @@ export const TermsModal: React.FC<TermsModalProps> = ({ visible, onClose }) => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionIcon}>🔒</Text>
-              <Text style={styles.sectionTitle}>1. Zero Anúncios e Ausência de Lucro com Seus Dados</Text>
+              <Text style={styles.sectionTitle}>
+                1. Zero Anúncios e Ausência de Lucro com Seus Dados
+              </Text>
             </View>
             <Text style={styles.sectionBody}>
               Nenhum dado pessoal ou de navegação é vendido, alugado, monetizado ou transferido para
@@ -90,7 +87,8 @@ export const TermsModal: React.FC<TermsModalProps> = ({ visible, onClose }) => {
             </Text>
             <View style={styles.bulletList}>
               <Text style={styles.bulletItem}>
-                • Interceptar momentos de vulnerabilidade e oferecer estratégias de ancoragem imediata.
+                • Interceptar momentos de vulnerabilidade e oferecer estratégias de ancoragem
+                imediata.
               </Text>
               <Text style={styles.bulletItem}>
                 • Calcular de forma estritamente privada seu histórico acumulado de progresso.
@@ -105,7 +103,9 @@ export const TermsModal: React.FC<TermsModalProps> = ({ visible, onClose }) => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionIcon}>🛡️</Text>
-              <Text style={styles.sectionTitle}>3. Anonimato Estrutural e Desacoplamento Criptográfico</Text>
+              <Text style={styles.sectionTitle}>
+                3. Anonimato Estrutural e Desacoplamento Criptográfico
+              </Text>
             </View>
             <Text style={styles.sectionBody}>
               Sua identidade civil nunca é revelada para a comunidade. Seus dados de perfil operam
@@ -119,7 +119,9 @@ export const TermsModal: React.FC<TermsModalProps> = ({ visible, onClose }) => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionIcon}>🗑️</Text>
-              <Text style={styles.sectionTitle}>4. Direito ao Esquecimento e Expurgo Definitivo</Text>
+              <Text style={styles.sectionTitle}>
+                4. Direito ao Esquecimento e Expurgo Definitivo
+              </Text>
             </View>
             <Text style={styles.sectionBody}>
               Em conformidade com o Art. 18, inciso VI da LGPD, você possui a autonomia total de
@@ -133,7 +135,9 @@ export const TermsModal: React.FC<TermsModalProps> = ({ visible, onClose }) => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionIcon}>🤝</Text>
-              <Text style={styles.sectionTitle}>5. Apoio Mútuo Horizontal e Delimitação Não-Clínica</Text>
+              <Text style={styles.sectionTitle}>
+                5. Apoio Mútuo Horizontal e Delimitação Não-Clínica
+              </Text>
             </View>
             <Text style={styles.sectionBody}>
               O Âncora é uma ferramenta de suporte entre pares e acolhimento comunitário. Não

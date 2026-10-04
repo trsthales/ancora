@@ -1,11 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTheme, ThemeColors } from '../contexts/ThemeContext';
 import { journeyService, Checkin, MoodType } from '../services/journey';
 
@@ -140,16 +134,11 @@ export const CheckinCard: React.FC<CheckinCardProps> = ({
               <View
                 style={[
                   styles.miniDot,
-                  todayCheckin.cravingLevel >= 4
-                    ? styles.coralDot
-                    : styles.tealDot,
+                  todayCheckin.cravingLevel >= 4 ? styles.coralDot : styles.tealDot,
                 ]}
               />
               <Text
-                style={[
-                  styles.summaryValue,
-                  todayCheckin.cravingLevel >= 4 && styles.coralText,
-                ]}
+                style={[styles.summaryValue, todayCheckin.cravingLevel >= 4 && styles.coralText]}
               >
                 {todayCheckin.cravingLevel} • {getCravingDesc(todayCheckin.cravingLevel)}
               </Text>
@@ -194,12 +183,7 @@ export const CheckinCard: React.FC<CheckinCardProps> = ({
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Nível de Fissura</Text>
-          <Text
-            style={[
-              styles.cravingBadgeDesc,
-              isHighCraving && styles.coralText,
-            ]}
-          >
+          <Text style={[styles.cravingBadgeDesc, isHighCraving && styles.coralText]}>
             {cravingLevel} • {getCravingDesc(cravingLevel)}
           </Text>
         </View>
@@ -235,10 +219,7 @@ export const CheckinCard: React.FC<CheckinCardProps> = ({
               >
                 <Text style={textStyle}>{item.label}</Text>
                 <Text
-                  style={[
-                    styles.cravingMiniDesc,
-                    isSelected && styles.cravingMiniDescSelected,
-                  ]}
+                  style={[styles.cravingMiniDesc, isSelected && styles.cravingMiniDescSelected]}
                   numberOfLines={1}
                 >
                   {item.desc}
@@ -252,7 +233,8 @@ export const CheckinCard: React.FC<CheckinCardProps> = ({
           <View style={styles.highCravingBanner}>
             <Text style={styles.highCravingIcon}>⚠️</Text>
             <Text style={styles.highCravingNotice}>
-              Fissura intensa/crítica: o protocolo de acolhimento e suporte será ativado para te apoiar.
+              Fissura intensa/crítica: o protocolo de acolhimento e suporte será ativado para te
+              apoiar.
             </Text>
           </View>
         )}
@@ -267,22 +249,14 @@ export const CheckinCard: React.FC<CheckinCardProps> = ({
             return (
               <TouchableOpacity
                 key={item.key}
-                style={[
-                  styles.moodChip,
-                  isSelected && styles.moodChipSelected,
-                ]}
+                style={[styles.moodChip, isSelected && styles.moodChipSelected]}
                 onPress={() => setMood(item.key)}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel={`Humor: ${item.label}`}
               >
                 <Text style={styles.moodChipIcon}>{item.icon}</Text>
-                <Text
-                  style={[
-                    styles.moodChipText,
-                    isSelected && styles.moodChipTextSelected,
-                  ]}
-                >
+                <Text style={[styles.moodChipText, isSelected && styles.moodChipTextSelected]}>
                   {item.label}
                 </Text>
               </TouchableOpacity>

@@ -91,6 +91,11 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
   // Estado da chave rotacionada obtida com sucesso
   const [newRotatedKey, setNewRotatedKey] = useState<string | null>(null);
   const [hasCopied, setHasCopied] = useState(false);
+  const [hasEverCopiedNewKey, setHasEverCopiedNewKey] = useState(false);
+  const [hasConfirmedSavedNewKey, setHasConfirmedSavedNewKey] = useState(false);
+
+  const canCompleteRecovery =
+    (hasEverCopiedNewKey || hasConfirmedSavedNewKey) && !isActivatingSession;
 
   const isFormValid =
     pseudonym.trim().length > 0 &&
@@ -105,6 +110,8 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
     setErrorMessage(null);
     setNewRotatedKey(null);
     setHasCopied(false);
+    setHasEverCopiedNewKey(false);
+    setHasConfirmedSavedNewKey(false);
     setIsActivatingSession(false);
     onClose();
   };
@@ -150,12 +157,14 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
         await navigator.clipboard.writeText(keyToCopy);
       }
       setHasCopied(true);
+      setHasEverCopiedNewKey(true);
       setTimeout(() => setHasCopied(false), 2500);
     } catch {
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
         try {
           await navigator.clipboard.writeText(keyToCopy);
           setHasCopied(true);
+          setHasEverCopiedNewKey(true);
           setTimeout(() => setHasCopied(false), 2500);
           return;
         } catch {
@@ -163,6 +172,7 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
         }
       }
       Alert.alert('Nova Chave de Recuperação', keyToCopy);
+      setHasEverCopiedNewKey(true);
     }
   };
 
@@ -209,8 +219,8 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
                     <Text style={styles.headerIcon}>🔐</Text>
                     <Text style={styles.headerTitle}>Recuperar Acesso</Text>
                     <Text style={styles.headerSubtitle}>
-                      Insira seu pseudônimo, sua Chave Mestra e defina uma nova senha para restabelecer
-                      sua conta anônima.
+                      Insira seu pseudônimo, sua Chave Mestra e defina uma nova senha para
+                      restabelecer sua conta anônima.
                     </Text>
                   </View>
 
@@ -339,18 +349,44 @@ export const RecoverAccountModal: React.FC<RecoverAccountModalProps> = ({ visibl
                         possível recuperar seu acesso futuro.
                       </Text>
                     </View>
+
+                    <TouchableOpacity
+                      style={styles.checkboxContainer}
+                      onPress={() => setHasConfirmedSavedNewKey((prev) => !prev)}
+                      activeOpacity={0.8}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: hasConfirmedSavedNewKey }}
+                      accessibilityLabel="Salvei minha nova Chave Mestra em local seguro"
+                    >
+                      <View
+                        style={[styles.checkbox, hasConfirmedSavedNewKey && styles.checkboxChecked]}
+                      >
+                        {hasConfirmedSavedNewKey && <Text style={styles.checkmark}>✓</Text>}
+                      </View>
+                      <Text style={styles.checkboxLabel}>
+                        Salvei minha nova Chave Mestra em local seguro
+                      </Text>
+                    </TouchableOpacity>
                   </View>
 
                   <TouchableOpacity
-                    style={styles.submitButton}
+                    style={[
+                      styles.submitButton,
+                      !canCompleteRecovery && styles.submitButtonDisabled,
+                    ]}
                     onPress={handleConfirmAndEnter}
-                    disabled={isActivatingSession}
+                    disabled={!canCompleteRecovery}
                     activeOpacity={0.8}
                   >
                     {isActivatingSession ? (
                       <ActivityIndicator color={colors.primaryText} />
                     ) : (
-                      <Text style={styles.submitButtonText}>
+                      <Text
+                        style={[
+                          styles.submitButtonText,
+                          !canCompleteRecovery && styles.submitButtonTextDisabled,
+                        ]}
+                      >
                         Salvei minha nova chave e quero entrar
                       </Text>
                     )}
@@ -585,5 +621,37 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
       fontSize: 12,
       lineHeight: 16,
       color: theme === 'dark' ? '#fde68a' : '#b45309',
+    },
+    checkboxContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 12,
+      paddingVertical: 4,
+    },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderRadius: 5,
+      borderWidth: 1.5,
+      borderColor: colors.cardBorder,
+      backgroundColor: theme === 'dark' ? '#0f172a' : '#ffffff',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxChecked: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    checkmark: {
+      color: colors.primaryText,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    checkboxLabel: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: colors.text,
+      flex: 1,
     },
   });

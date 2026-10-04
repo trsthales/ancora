@@ -42,4 +42,3 @@ export const quarantinedPseudonyms = recoverySchema.table('quarantined_pseudonym
   quarantinedUntil: timestamp('quarantined_until', { withTimezone: true }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
-

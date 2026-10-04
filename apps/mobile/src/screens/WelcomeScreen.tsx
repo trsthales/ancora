@@ -23,7 +23,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
       <View style={styles.content}>
         <View style={styles.card}>
           <Text style={styles.icon}>⚓</Text>
-          <Text style={styles.title}>Âncora</Text>
+          <Text style={styles.title}>Jornada Firme</Text>
           <Text style={styles.slogan}>Firmeza para atravessar a tempestade.</Text>
           <Text style={styles.description}>
             Um espaço seguro e anônimo de apoio mútuo para a recuperação e bem-estar.

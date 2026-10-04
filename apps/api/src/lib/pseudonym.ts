@@ -80,13 +80,15 @@ export function generatePseudonym(): string {
   return `@${noun}${qualifier}_${suffix}`;
 }
 
+type DbOrTransaction = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /**
  * Verifica se um pseudônimo está disponível, checando se já existe em `profiles`
  * OU se está na tabela `quarantined_pseudonyms` com data vigente (`quarantinedUntil > NOW()`).
  */
 export async function isPseudonymAvailable(
   pseudonym: string,
-  txOrDb: any = db,
+  txOrDb: DbOrTransaction = db,
 ): Promise<boolean> {
   const [existingProfile] = await txOrDb
     .select({ id: profiles.id })
@@ -121,7 +123,7 @@ export async function isPseudonymAvailable(
  * nem com pseudônimos sob quarentena ativa de 30 dias.
  */
 export async function generateAvailablePseudonym(
-  txOrDb: any = db,
+  txOrDb: DbOrTransaction = db,
   maxAttempts = 15,
 ): Promise<string> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -134,5 +136,3 @@ export async function generateAvailablePseudonym(
 
   throw new Error('Não foi possível gerar um pseudônimo único após múltiplas tentativas.');
 }
-
-
