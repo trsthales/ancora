@@ -18,6 +18,7 @@ import { CheckinCard } from '../components/CheckinCard';
 import { ProgressCard } from '../components/ProgressCard';
 import { AlternativesModal } from '../components/AlternativesModal';
 import { journeyService, Checkin } from '../services/journey';
+import { RoutineScreen } from './RoutineScreen';
 
 export const HomeScreen: React.FC = () => {
   const { profile, logout, deleteAccount } = useAuth();
@@ -41,6 +42,9 @@ export const HomeScreen: React.FC = () => {
   // Estado do Motor de Interceptação para fissura alta
   const [isAlternativesOpen, setIsAlternativesOpen] = useState(false);
   const [interceptedCravingLevel, setInterceptedCravingLevel] = useState(4);
+
+  // Estado da Minha Rotina (TASK-402)
+  const [isRoutineOpen, setIsRoutineOpen] = useState(false);
 
   const styles = useMemo(() => createStyles(colors, theme), [colors, theme]);
 
@@ -129,6 +133,15 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
+  if (isRoutineOpen) {
+    return (
+      <RoutineScreen
+        onBack={() => setIsRoutineOpen(false)}
+        todayCravingLevel={todayCheckin?.cravingLevel ?? 0}
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar
@@ -215,6 +228,40 @@ export const HomeScreen: React.FC = () => {
             setIsAlternativesOpen(true);
           }}
         />
+
+        {/* Card Minha Rotina e Hábitos Pessoais (TASK-402) */}
+        <View style={styles.routineCard}>
+          <View style={styles.routineCardTop}>
+            <View style={styles.routineIconContainer}>
+              <Text style={styles.routineCardIcon}>📋</Text>
+            </View>
+            <View style={styles.routineCardHeaderTexts}>
+              <Text style={styles.routineCardTitle}>Minha Rotina</Text>
+              <Text style={styles.routineCardSub}>Hábitos e Recursos Pessoais Protegidos</Text>
+            </View>
+          </View>
+          <Text style={styles.routineCardBody}>
+            Acompanhe seus hábitos diários de ancoragem e tarefas privadas locais protegidas por
+            criptografia no aparelho.
+          </Text>
+          {todayCheckin && todayCheckin.cravingLevel >= 4 && (
+            <View style={styles.lightDayHintBanner}>
+              <Text style={styles.lightDayHintIcon}>🌿</Text>
+              <Text style={styles.lightDayHintText}>
+                Modo Dia Leve ativado para acolher seu momento com calma.
+              </Text>
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.routineButton}
+            onPress={() => setIsRoutineOpen(true)}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir Minha Rotina"
+          >
+            <Text style={styles.routineButtonText}>Abrir Minha Rotina</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Card SOS Integrado (R03) */}
         <View style={styles.sosCard}>
@@ -577,6 +624,82 @@ const createStyles = (colors: ThemeColors, theme: 'dark' | 'light') =>
     highlightText: {
       color: colors.primary,
       fontWeight: '600',
+    },
+    routineCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1.5,
+      borderColor: colors.cardBorder,
+      gap: 12,
+    },
+    routineCardTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    routineIconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor:
+        theme === 'dark' ? 'rgba(13, 148, 136, 0.2)' : 'rgba(15, 118, 110, 0.12)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    routineCardIcon: {
+      fontSize: 20,
+    },
+    routineCardHeaderTexts: {
+      flex: 1,
+      gap: 2,
+    },
+    routineCardTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    routineCardSub: {
+      fontSize: 12,
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    routineCardBody: {
+      fontSize: 13,
+      color: colors.textMuted,
+      lineHeight: 19,
+    },
+    lightDayHintBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor:
+        theme === 'dark' ? 'rgba(13, 148, 136, 0.15)' : 'rgba(15, 118, 110, 0.08)',
+      padding: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(45, 212, 191, 0.3)' : 'rgba(15, 118, 110, 0.2)',
+    },
+    lightDayHintIcon: {
+      fontSize: 16,
+    },
+    lightDayHintText: {
+      fontSize: 12,
+      color: colors.text,
+      flex: 1,
+    },
+    routineButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 10,
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    routineButtonText: {
+      color: '#ffffff',
+      fontSize: 14,
+      fontWeight: 'bold',
     },
     sosCard: {
       backgroundColor: colors.card,
