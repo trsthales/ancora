@@ -19,6 +19,17 @@ export const REDACTED_PATHS = [
   '*.accessToken',
   '*.*.accessToken',
 
+  // Chaves Mestras e Identificadores (Falha 2.1)
+  'recoveryKey',
+  '*.recoveryKey',
+  '*.*.recoveryKey',
+  'recoveryKeyHash',
+  '*.recoveryKeyHash',
+  '*.*.recoveryKeyHash',
+  'identifier',
+  '*.identifier',
+  '*.*.identifier',
+
   // Headers sensíveis
   'req.headers.authorization',
   'req.headers.cookie',
@@ -40,7 +51,7 @@ export const REDACTED_PATHS = [
   '*.remoteAddress',
   'req.remoteAddress',
 
-  // Dados de Saúde e Recuperação
+  // Dados de Saúde, Escolhas Clínicas e Rotina (Art. 11 LGPD - Falha 2.1)
   'cravingLevel',
   '*.cravingLevel',
   '*.*.cravingLevel',
@@ -53,6 +64,15 @@ export const REDACTED_PATHS = [
   'mood',
   '*.mood',
   '*.*.mood',
+  'chipId',
+  '*.chipId',
+  '*.*.chipId',
+  'chipIds',
+  '*.chipIds',
+  '*.*.chipIds',
+  'primaryChipId',
+  '*.primaryChipId',
+  '*.*.primaryChipId',
 ];
 
 export const loggerConfig: FastifyServerOptions['logger'] = {

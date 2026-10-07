@@ -296,7 +296,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     {
       config: {
         rateLimit: {
-          max: 100,
+          max: 15,
           timeWindow: 60 * 1000,
         },
       },
@@ -415,7 +415,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     {
       config: {
         rateLimit: {
-          max: 5,
+          max: 10,
           timeWindow: 60 * 1000,
         },
       },
