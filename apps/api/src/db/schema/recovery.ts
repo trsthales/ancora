@@ -45,12 +45,19 @@ export const checkins = recoverySchema.table(
   (table) => [index('idx_checkins_profile_created').on(table.profileId, table.createdAt)],
 );
 
-export const quarantinedPseudonyms = recoverySchema.table('quarantined_pseudonyms', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  pseudonym: varchar('pseudonym', { length: 50 }).notNull().unique(),
-  quarantinedUntil: timestamp('quarantined_until', { withTimezone: true }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+export const quarantinedPseudonyms = recoverySchema.table(
+  'quarantined_pseudonyms',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    accountToken: varchar('account_token', { length: 64 }),
+    pseudonym: varchar('pseudonym', { length: 50 }).notNull().unique(),
+    quarantinedUntil: timestamp('quarantined_until', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_quarantined_account_token').on(table.accountToken),
+  ],
+);
 
 export const habits = recoverySchema.table(
   'habits',

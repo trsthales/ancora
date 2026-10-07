@@ -1,9 +1,17 @@
 import crypto from 'node:crypto';
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, or } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { users, profiles, sessions, consents, checkins } from '../db/schema/index.js';
+import {
+  users,
+  profiles,
+  sessions,
+  consents,
+  checkins,
+  habits,
+  quarantinedPseudonyms,
+} from '../db/schema/index.js';
 import { hashPassword, verifyPassword, getDummyHash } from '../lib/hash.js';
 import { generateAvailablePseudonym } from '../lib/pseudonym.js';
 import {
@@ -75,8 +83,8 @@ export type LoginBodyInput = z.infer<typeof loginBodySchema>;
 export const recoverBodySchema = z.object({
   pseudonym: z
     .string()
-    .min(1, 'O pseudônimo é obrigatório')
-    .max(50, 'O pseudônimo deve conter no máximo 50 caracteres'),
+    .max(50, 'O pseudônimo deve conter no máximo 50 caracteres')
+    .optional(),
   recoveryKey: z
     .string()
     .min(1, 'A chave de recuperação é obrigatória')
@@ -426,18 +434,6 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const { pseudonym, recoveryKey, newPassword } = parseResult.data;
-      const loginToken = deriveLoginToken(pseudonym);
-
-      const [user] = await db.select().from(users).where(eq(users.loginToken, loginToken)).limit(1);
-
-      if (!user) {
-        // Anti-timing attack dummy hash
-        await verifyPassword(getDummyHash(), newPassword).catch(() => false);
-        return reply.status(401).send({
-          status: 'error',
-          message: 'Credenciais de recuperação inválidas.',
-        });
-      }
 
       let providedKeyHash: string;
       try {
@@ -450,6 +446,32 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
+      // 1. Busca atômica prioritária pela Chave Mestra (entropia de 100 bits unívoca)
+      let [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.recoveryKeyHash, providedKeyHash))
+        .limit(1);
+
+      // 2. Fallback defensivo por loginToken se a busca direta não retornar
+      if (!user && pseudonym) {
+        const loginToken = deriveLoginToken(pseudonym);
+        [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.loginToken, loginToken))
+          .limit(1);
+      }
+
+      if (!user) {
+        await verifyPassword(getDummyHash(), newPassword).catch(() => false);
+        return reply.status(401).send({
+          status: 'error',
+          message: 'Credenciais de recuperação inválidas.',
+        });
+      }
+
+      // Validação em tempo constante contra timing attacks
       const isKeyValid =
         providedKeyHash.length === user.recoveryKeyHash.length &&
         crypto.timingSafeEqual(Buffer.from(providedKeyHash), Buffer.from(user.recoveryKeyHash));
@@ -921,17 +943,27 @@ export const deleteAccountHandler = async (request: FastifyRequest, reply: Fasti
   const accountToken = deriveAccountToken(userId);
 
   await db.transaction(async (tx) => {
-    // 1. Buscar o perfil pelo accountToken para obter o profileId
+    // 1. Buscar o perfil pelo accountToken para obter profileId e pseudonym
     const [profile] = await tx
-      .select({ id: profiles.id })
+      .select({ id: profiles.id, pseudonym: profiles.pseudonym })
       .from(profiles)
       .where(eq(profiles.accountToken, accountToken))
       .limit(1);
 
-    // 2. Deletar todos os check-ins associados ao profileId em recovery_core.checkins
+    // 2. Expurga pseudônimos em quarentena vinculados ao accountToken do usuário
+    await tx
+      .delete(quarantinedPseudonyms)
+      .where(
+        or(
+          eq(quarantinedPseudonyms.accountToken, accountToken),
+          profile ? eq(quarantinedPseudonyms.pseudonym, profile.pseudonym) : undefined,
+        ),
+      );
+
+    // 3. Deletar todos os check-ins, hábitos e perfil em recovery_core
     if (profile) {
       await tx.delete(checkins).where(eq(checkins.profileId, profile.id));
-      // 3. Deletar o perfil em recovery_core.profiles
+      await tx.delete(habits).where(eq(habits.profileId, profile.id));
       await tx.delete(profiles).where(eq(profiles.id, profile.id));
     }
 

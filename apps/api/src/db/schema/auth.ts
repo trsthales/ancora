@@ -16,14 +16,17 @@ export const users = authSchema.table(
     id: uuid('id').defaultRandom().primaryKey(),
     loginToken: varchar('login_token', { length: 64 }).notNull().unique(),
     passwordHash: varchar('password_hash', { length: 255 }).notNull(),
-    recoveryKeyHash: varchar('recovery_key_hash', { length: 64 }).notNull(),
+    recoveryKeyHash: varchar('recovery_key_hash', { length: 64 }).notNull().unique(),
     tokenVersion: integer('token_version').notNull().default(0),
     isAdult: boolean('is_adult').notNull().default(false),
     role: varchar('role', { length: 50 }).notNull().default('user'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [uniqueIndex('idx_users_login_token').on(table.loginToken)],
+  (table) => [
+    uniqueIndex('idx_users_login_token').on(table.loginToken),
+    uniqueIndex('idx_users_recovery_key_hash').on(table.recoveryKeyHash),
+  ],
 );
 
 export const sessions = authSchema.table(
