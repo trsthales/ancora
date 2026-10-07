@@ -393,7 +393,7 @@ export const myTools = recoverySchema.table(
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
     chipId: varchar('chip_id', { length: 32 }).notNull(),
-    category: varchar('category', { length: 10 }).notNull(),
+    category: varchar('category', { length: 20 }).notNull(),
     savedAt: timestamp('saved_at', { withTimezone: true })
       .default(sql`date_trunc('day', now())`)
       .notNull(),
@@ -414,6 +414,27 @@ export const postSupports = recoverySchema.table(
       .notNull(),
   },
   (table) => [primaryKey({ columns: [table.postId, table.reactionToken] })],
+);
+
+// Tabela Auxiliar de Expurgo LGPD (Blindagem Anti-Orfandade - Falha 6.2)
+export const profileReactions = recoverySchema.table(
+  'profile_reactions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    profileId: uuid('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    postId: uuid('post_id')
+      .notNull()
+      .references(() => triadPosts.id, { onDelete: 'cascade' }),
+    reactionToken: varchar('reaction_token', { length: 64 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .default(sql`date_trunc('day', now())`)
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex('idx_profile_reactions_unique').on(table.profileId, table.postId),
+  ],
 );
 
 // Instrumentação Agregada do Piloto (Zero Telemetria Vigilante)
@@ -518,7 +539,7 @@ LIMIT 20;
 - **Controle Atômico de Cota:**
   ```sql
   INSERT INTO recovery_core.daily_post_limits (profile_id, post_date, post_count)
-  VALUES ($profileId, CURRENT_DATE AT TIME ZONE 'America/Sao_Paulo', 1)
+  VALUES ($profileId, (now() AT TIME ZONE 'America/Sao_Paulo')::date, 1)
   ON CONFLICT (profile_id, post_date)
   DO UPDATE SET post_count = daily_post_limits.post_count + 1
   WHERE daily_post_limits.post_count < 3
@@ -554,19 +575,36 @@ LIMIT 20;
 #### D. Reação "Estamos Juntos" (`POST /api/v1/community/posts/:id/together`)
 1. Deriva o token cego:
    $$\text{reaction\_token} = \text{HMAC-SHA256}(\text{profile\_id} \parallel \text{postId}, \text{APP\_PEPPER\_V1})$$
-2. Executa inserção com incremento atômico:
+2. Executa inserção atômica do apoio em `post_supports` e registro auxiliar do vínculo em `profile_reactions` (prevenção de orfandade):
    ```sql
    WITH inserted_support AS (
      INSERT INTO recovery_core.post_supports (post_id, reaction_token)
      VALUES ($postId, $reactionToken)
      ON CONFLICT (post_id, reaction_token) DO NOTHING
      RETURNING post_id
+   ),
+   recorded_reaction AS (
+     INSERT INTO recovery_core.profile_reactions (profile_id, post_id, reaction_token)
+     VALUES ($profileId, $postId, $reactionToken)
+     ON CONFLICT (profile_id, post_id) DO NOTHING
+     RETURNING id
    )
    UPDATE recovery_core.triad_posts
    SET support_count = support_count + 1
    WHERE id = $postId
      AND EXISTS (SELECT 1 FROM inserted_support);
    ```
+
+#### E. Blindagem Anti-Orfandade e Expurgo LGPD (Falha 6.2)
+Para assegurar desassociação total sem violar integridade relacional nem deixar resíduos criptográficos em caso de exclusão de conta (`DELETE /api/v1/account`):
+1. O handler do expurgo executa a deleção em lote dos apoios concedidos pelo usuário em posts de terceiros:
+   ```sql
+   DELETE FROM recovery_core.post_supports
+   WHERE reaction_token IN (
+     SELECT reaction_token FROM recovery_core.profile_reactions WHERE profile_id = $profileId
+   );
+   ```
+2. Em seguida, a exclusão de `recovery_core.profiles` remove por cascata (`ON DELETE CASCADE`) todos os registros da tabela auxiliar `recovery_core.profile_reactions`, eliminando qualquer possibilidade de ataque de correlação por pertinência (`HMAC`) em dumps de banco.
 
 ---
 

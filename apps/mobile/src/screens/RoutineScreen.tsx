@@ -16,6 +16,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { habitsService, getTodayDateKey } from '../services/habits';
 import {
   encryptedStorageService,
+  getLightDayPreference,
+  setLightDayPreference,
   MAX_LOCAL_TASKS,
   MIN_TITLE_LENGTH,
   MAX_TITLE_LENGTH,
@@ -65,13 +67,13 @@ export const RoutineScreen: React.FC<RoutineScreenProps> = ({
 
   const dateKey = useMemo(() => getTodayDateKey(), []);
 
-  // Carrega hábitos da API e tarefas locais cifradas
+  // Carrega hábitos da API, tarefas locais cifradas e preferência de Dia Leve
   const loadRoutineData = useCallback(async () => {
     setIsLoading(true);
     setSyncError(null);
 
     try {
-      const [apiRes, localList] = await Promise.all([
+      const [apiRes, localList, savedLightDay] = await Promise.all([
         habitsService.getHabits(dateKey).catch((err) => {
           console.warn('[RoutineScreen] Falha ao carregar hábitos da API:', err);
           setSyncError('Falha temporária ao sincronizar com o servidor. Hábitos locais preservados.');
@@ -81,10 +83,19 @@ export const RoutineScreen: React.FC<RoutineScreenProps> = ({
           console.warn('[RoutineScreen] Falha ao decifrar tarefas locais:', err);
           return [] as LocalTask[];
         }),
+        getLightDayPreference(dateKey).catch((err) => {
+          console.warn('[RoutineScreen] Falha ao carregar preferência de Dia Leve:', err);
+          return false;
+        }),
       ]);
 
       setOfficialHabits(apiRes.habits || []);
       setLocalTasks(localList || []);
+
+      // Se o usuário registrou fissura >= 4 OU se getLightDayPreference for true, ativa isLightDay
+      if (todayCravingLevel >= 4 || savedLightDay) {
+        setIsLightDay(true);
+      }
 
       // Se o usuário não possui hábitos nem tarefas e não abriu onboarding ainda
       if ((!apiRes.habits || apiRes.habits.length === 0) && (!localList || localList.length === 0)) {
@@ -93,18 +104,27 @@ export const RoutineScreen: React.FC<RoutineScreenProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [dateKey]);
+  }, [dateKey, todayCravingLevel]);
 
   useEffect(() => {
     loadRoutineData();
   }, [loadRoutineData]);
 
-  // Se a fissura for atualizada para >= 4, ativa o modo Dia Leve
+  // Se a fissura for atualizada para >= 4, ativa o modo Dia Leve e persiste no storage
   useEffect(() => {
     if (todayCravingLevel >= 4) {
       setIsLightDay(true);
+      void setLightDayPreference(dateKey, true);
     }
-  }, [todayCravingLevel]);
+  }, [todayCravingLevel, dateKey]);
+
+  // Alterna o modo Dia Leve e persiste a preferência no encryptedStorage
+  const handleToggleLightDay = useCallback(() => {
+    const nextLight = !isLightDay;
+    setIsLightDay(nextLight);
+    setIsExpandedFull(false);
+    void setLightDayPreference(dateKey, nextLight);
+  }, [isLightDay, dateKey]);
 
   // Unifica hábitos oficiais e tarefas locais
   const unifiedItems: UnifiedRoutineItem[] = useMemo(() => {
@@ -354,10 +374,7 @@ export const RoutineScreen: React.FC<RoutineScreenProps> = ({
         {/* Modo Dia Leve (🌿 Hoje basta isso) */}
         <LightDayBanner
           isLightDay={isLightDay}
-          onToggleLightDay={() => {
-            setIsLightDay((prev) => !prev);
-            setIsExpandedFull(false);
-          }}
+          onToggleLightDay={handleToggleLightDay}
           isExpandedFull={isExpandedFull}
           onToggleExpandFull={() => setIsExpandedFull((prev) => !prev)}
           triggeredByCraving={triggeredByCraving}

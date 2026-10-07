@@ -66,6 +66,7 @@ export const habitsRoutes: FastifyPluginAsync = async (app) => {
       }
       dateKey = rawDateKey;
     } else {
+      // Data civil brasileira canônica equivalente a (now() AT TIME ZONE 'America/Sao_Paulo')::date
       dateKey = getTodayDateKey('America/Sao_Paulo');
     }
 

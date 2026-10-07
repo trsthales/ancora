@@ -250,10 +250,30 @@ CREATE TABLE recovery_core.my_tools (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     profile_id UUID NOT NULL REFERENCES recovery_core.profiles(id) ON DELETE CASCADE,
     chip_id VARCHAR(32) NOT NULL,
+    category VARCHAR(20) NOT NULL,
     saved_at TIMESTAMPTZ NOT NULL DEFAULT date_trunc('day', now())
 );
 
 CREATE UNIQUE INDEX idx_my_tools_profile_chip ON recovery_core.my_tools(profile_id, chip_id);
+```
+
+**Schema Canônico Drizzle (`apps/api/src/db/schema/recovery.ts`):**
+```typescript
+export const myTools = recoverySchema.table(
+  'my_tools',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    profileId: uuid('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    chipId: varchar('chip_id', { length: 32 }).notNull(),
+    category: varchar('category', { length: 20 }).notNull(),
+    savedAt: timestamp('saved_at', { withTimezone: true })
+      .default(sql`date_trunc('day', now())`)
+      .notNull(),
+  },
+  (table) => [uniqueIndex('idx_my_tools_profile_chip').on(table.profileId, table.chipId)],
+);
 ```
 
 ---
@@ -268,8 +288,23 @@ CREATE UNIQUE INDEX idx_my_tools_profile_chip ON recovery_core.my_tools(profile_
   Adiciona um chip do catálogo oficial à rotina pessoal.  
   Validação Zod: `z.object({ chipId: z.string().max(32) })`.  
   *(A API rejeita qualquer tentativa de enviar títulos livres ou strings customizadas para o servidor).*
-* `POST /api/v1/journey/habits/:id/toggle`:  
-  Marca ou desmarca a conclusão daquele hábito na data de hoje. Retorna `{ completed: boolean }`.
+* `PUT /api/v1/journey/habits/:id/logs/:dateKey`:  
+  Registra ou desmarca a conclusão de um hábito na data especificada (`dateKey` no formato `YYYY-MM-DD`). Operação estritamente declarativa e idempotente.
+  - Parâmetros de rota: `id` (UUID do hábito), `dateKey` (data no formato YYYY-MM-DD com tolerância temporal de ±1 dia).
+  - Body: `{ completed: boolean }`.
+  - Validação Zod:
+    ```typescript
+    const paramsSchema = z.object({
+      id: z.string().uuid('ID do hábito deve ser um UUID válido.'),
+      dateKey: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de data inválido. Use YYYY-MM-DD.'),
+    });
+    const bodySchema = z.object({
+      completed: z.boolean({ required_error: 'O campo completed é obrigatório.' }),
+    });
+    ```
+  - Retorno HTTP 200: `{ status: 'success', data: { habitId: string, dateKey: string, completed: boolean } }`.
+  - Mecanismo Idempotente: Se `completed: true`, executa `INSERT INTO habit_logs ... ON CONFLICT (habit_id, date_key) DO NOTHING` com `completed_at` truncado para hora (`date_trunc('hour', now())`). Se `completed: false`, executa `DELETE FROM habit_logs WHERE habit_id = :id AND date_key = :dateKey`.
+  *(Nota Canônica de Auditoria - Falha 5.1: O endpoint legado `POST .../toggle` foi formalmente revogado para eliminar mutações ambíguas e assegurar idempotência em redes instáveis).*
 * `DELETE /api/v1/journey/habits/:id`:  
   Remove o hábito da rotina.
 
