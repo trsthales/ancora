@@ -64,6 +64,13 @@
       "when": 1791115238583,
       "tag": "0008_add_habits_and_logs",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791398005159,
+      "tag": "0009_harden_recovery_key_and_quarantine",
+      "breakpoints": true
     }
   ]
 }

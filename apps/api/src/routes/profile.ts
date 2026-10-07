@@ -109,16 +109,18 @@ export const profileRoutes: FastifyPluginAsync = async (app) => {
         newPseudonym = await generateAvailablePseudonym(tx);
 
         // 1. Inserir o pseudônimo antigo na quarentena por 30 dias
+        const accountToken = deriveAccountToken(userId);
         const quarantinedUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
         await tx
           .insert(quarantinedPseudonyms)
           .values({
+            accountToken,
             pseudonym: currentProfile.pseudonym,
             quarantinedUntil,
           })
           .onConflictDoUpdate({
             target: quarantinedPseudonyms.pseudonym,
-            set: { quarantinedUntil },
+            set: { quarantinedUntil, accountToken },
           });
 
         // 2. Atualizar atomicamente o loginToken na tabela users
