@@ -181,7 +181,7 @@ export const journeyRoutes: FastifyPluginAsync = async (app) => {
 
     const [countResult] = await db
       .select({
-        count: sql<number>`cast(count(distinct date(created_at at time zone 'America/Sao_Paulo')) as integer)`,
+        count: sql<number>`cast(count(distinct (created_at at time zone 'America/Sao_Paulo')::date) as integer)`,
       })
       .from(checkins)
       .where(eq(checkins.profileId, profileId));

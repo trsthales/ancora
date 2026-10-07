@@ -259,6 +259,31 @@ export async function deleteLocalTask(id: string): Promise<LocalTask[]> {
   return updatedTasks;
 }
 
+export const LIGHT_DAY_KEY_PREFIX = '@ancora_light_day_';
+
+/**
+ * Persiste a preferência diária do modo "Dia Leve" no armazenamento seguro indexado por dateKey.
+ */
+export async function setLightDayPreference(dateKey: string, isLight: boolean): Promise<void> {
+  const key = `${LIGHT_DAY_KEY_PREFIX}${dateKey}`;
+  await AsyncStorage.setItem(key, JSON.stringify({ isLight, dateKey }));
+}
+
+/**
+ * Obtém a preferência diária do modo "Dia Leve" para o dateKey especificado.
+ */
+export async function getLightDayPreference(dateKey: string): Promise<boolean> {
+  try {
+    const key = `${LIGHT_DAY_KEY_PREFIX}${dateKey}`;
+    const raw = await AsyncStorage.getItem(key);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    return parsed.dateKey === dateKey ? Boolean(parsed.isLight) : false;
+  } catch {
+    return false;
+  }
+}
+
 export const encryptedStorageService = {
   saveLocalTasks,
   loadLocalTasks,
@@ -266,4 +291,6 @@ export const encryptedStorageService = {
   toggleLocalTask,
   deleteLocalTask,
   validateLocalTasks,
+  setLightDayPreference,
+  getLightDayPreference,
 };
