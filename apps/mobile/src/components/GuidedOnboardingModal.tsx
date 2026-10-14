@@ -111,6 +111,17 @@ export const GuidedOnboardingModal: React.FC<GuidedOnboardingModalProps> = ({
           <ScrollView contentContainerStyle={styles.scrollContent}>
             {/* Cabeçalho */}
             <View style={styles.header}>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={onClose}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityRole="button"
+                accessibilityLabel="Fechar"
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.closeButtonText, { color: colors.textMuted }]}>✕</Text>
+              </TouchableOpacity>
+
               <View
                 style={[
                   styles.iconBadge,
@@ -288,6 +299,25 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     gap: 6,
+    position: 'relative',
+    width: '100%',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    zIndex: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#94a3b8',
+    lineHeight: 18,
   },
   iconBadge: {
     width: 48,
