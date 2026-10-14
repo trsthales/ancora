@@ -66,3 +66,25 @@ export function hashRecoveryKey(key: string): string {
   const normalized = normalizeRecoveryKey(key);
   return crypto.createHash('sha256').update(normalized).digest('hex');
 }
+
+/**
+ * Deriva token cego com separação de domínio para ações comunitárias (apoio silencioso e adoção de práticas).
+ */
+export function deriveCommunityActionToken(
+  action: 'support' | 'save',
+  postId: string,
+  reactionSalt: string,
+): string {
+  const pepper = env.COMMUNITY_PEPPER_V1 || env.APP_PEPPER_V1 || env.APP_PEPPER_SECRET;
+  const payload = `${action}:${postId}:${reactionSalt}`;
+  return crypto.createHmac('sha256', pepper).update(payload).digest('hex');
+}
+
+export function deriveSupportToken(postId: string, reactionSalt: string): string {
+  return deriveCommunityActionToken('support', postId, reactionSalt);
+}
+
+export function deriveSaveToken(postId: string, reactionSalt: string): string {
+  return deriveCommunityActionToken('save', postId, reactionSalt);
+}
+
