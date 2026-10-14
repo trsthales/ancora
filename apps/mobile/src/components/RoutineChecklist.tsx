@@ -29,21 +29,26 @@ export const RoutineChecklist: React.FC<RoutineChecklistProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <View style={styles.titleWithCount}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Checklist do Dia</Text>
-          <View
-            style={[
-              styles.counterBadge,
-              {
-                backgroundColor:
-                  theme === 'dark' ? 'rgba(13, 148, 136, 0.2)' : 'rgba(15, 118, 110, 0.12)',
-              },
-            ]}
-          >
-            <Text style={[styles.counterText, { color: colors.primary }]}>
-              {items.filter((i) => i.completed).length} de {items.length} cuidados
-            </Text>
+        <View>
+          <View style={styles.titleWithCount}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Checklist do Dia</Text>
+            <View
+              style={[
+                styles.counterBadge,
+                {
+                  backgroundColor:
+                    theme === 'dark' ? 'rgba(13, 148, 136, 0.2)' : 'rgba(15, 118, 110, 0.12)',
+                },
+              ]}
+            >
+              <Text style={[styles.counterText, { color: colors.primary }]}>
+                {items.filter((i) => i.completed).length} de {items.length} cuidados
+              </Text>
+            </View>
           </View>
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+            Um passo de cada vez
+          </Text>
         </View>
 
         <TouchableOpacity
@@ -232,6 +237,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
+  },
+  subtitle: {
+    fontSize: 13,
+    color: '#94a3b8',
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   counterBadge: {
     paddingVertical: 3,
