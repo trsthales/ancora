@@ -18,6 +18,7 @@ import {
   journeyRoutes,
   habitsRoutes,
   accountRoutes,
+  communityRoutes,
 } from './routes/index.js';
 
 export function isDatabaseError(err: unknown): boolean {
@@ -176,6 +177,10 @@ export const buildServer = async () => {
 
   await app.register(accountRoutes, {
     prefix: '/api/v1/account',
+  });
+
+  await app.register(communityRoutes, {
+    prefix: '/api/v1/community',
   });
 
   app.addHook('onClose', async () => {

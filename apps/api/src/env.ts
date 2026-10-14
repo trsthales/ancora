@@ -16,6 +16,7 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32),
   APP_PEPPER_SECRET: z.string().min(32),
   APP_PEPPER_V1: z.string().min(32).optional(),
+  COMMUNITY_PEPPER_V1: z.string().min(32).optional(),
 });
 
 const _env = envSchema.safeParse(process.env);
@@ -26,3 +27,6 @@ if (!_env.success) {
 }
 
 export const env = _env.data;
+
+export const getCommunityPepper = (): string =>
+  env.COMMUNITY_PEPPER_V1 || env.APP_PEPPER_V1 || env.APP_PEPPER_SECRET;
