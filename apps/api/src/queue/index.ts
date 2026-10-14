@@ -1,7 +1,19 @@
 import type { SendOptions } from 'pg-boss';
 import { boss } from './boss.js';
+import {
+  registerNotificationWorker,
+  processCommunityNotification,
+  COMMUNITY_NOTIFICATION_JOB,
+  type CommunityNotificationJob,
+} from './workers/notifications.js';
 
 export { boss, bossConfig } from './boss.js';
+export {
+  registerNotificationWorker,
+  processCommunityNotification,
+  COMMUNITY_NOTIFICATION_JOB,
+  type CommunityNotificationJob,
+};
 
 let isRunning = false;
 
@@ -19,6 +31,7 @@ export const startQueue = async (): Promise<void> => {
   }
   await boss.start();
   isRunning = true;
+  await registerNotificationWorker();
   console.log('🚀 [Queue] PgBoss iniciado com sucesso no schema "pgboss"');
 };
 
@@ -49,6 +62,9 @@ export const sendJob = async <T extends object>(
   data: T,
   options?: SendOptions,
 ): Promise<string | null> => {
+  if (!isRunning) {
+    return null;
+  }
   return boss.send(name, data, {
     ...DEFAULT_JOB_OPTIONS,
     ...options,

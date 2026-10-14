@@ -17,6 +17,8 @@ import {
   profileRoutes,
   journeyRoutes,
   habitsRoutes,
+  toolsRoutes,
+  notificationsRoutes,
   accountRoutes,
   communityRoutes,
 } from './routes/index.js';
@@ -173,6 +175,14 @@ export const buildServer = async () => {
 
   await app.register(habitsRoutes, {
     prefix: '/api/v1/journey/habits',
+  });
+
+  await app.register(toolsRoutes, {
+    prefix: '/api/v1/journey/tools',
+  });
+
+  await app.register(notificationsRoutes, {
+    prefix: '/api/v1/journey/notifications',
   });
 
   await app.register(accountRoutes, {

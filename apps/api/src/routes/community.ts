@@ -10,6 +10,7 @@ import {
   ME_AJUDA_CHIP_IDS,
 } from '../constants/chips.js';
 import { getIdempotentResponse, setIdempotentResponse } from '../lib/idempotency.js';
+import { sendJob } from '../queue/index.js';
 
 export const createPostSchema = z
   .object({
@@ -393,7 +394,7 @@ export const communityRoutes: FastifyPluginAsync = async (app) => {
       const reactionToken = deriveCommunityActionToken('support', postId, profile.reactionSalt);
 
       // 3. Incremento atômico condicional via CTE
-      await db.execute(sql`
+      const supportResult = await db.execute<{ updated_id: string }>(sql`
         WITH inserted_support AS (
           INSERT INTO recovery_core.post_supports (post_id, reaction_token)
           VALUES (${postId}, ${reactionToken})
@@ -403,8 +404,16 @@ export const communityRoutes: FastifyPluginAsync = async (app) => {
         UPDATE recovery_core.triad_posts
         SET support_count = support_count + 1
         WHERE id = ${postId}
-          AND EXISTS (SELECT 1 FROM inserted_support);
+          AND EXISTS (SELECT 1 FROM inserted_support)
+        RETURNING id as updated_id;
       `);
+
+      if (supportResult && supportResult.length > 0) {
+        await sendJob('record_community_notification', {
+          authorProfileId: post.profileId,
+          type: 'support',
+        });
+      }
 
       return reply.status(200).send({
         status: 'success',
@@ -467,7 +476,7 @@ export const communityRoutes: FastifyPluginAsync = async (app) => {
       const saveToken = deriveCommunityActionToken('save', postId, profile.reactionSalt);
 
       // 2. Inserção em post_saves e incremento condicional de saved_count
-      await db.execute(sql`
+      const saveResult = await db.execute<{ updated_id: string }>(sql`
         WITH inserted_save AS (
           INSERT INTO recovery_core.post_saves (post_id, save_token)
           VALUES (${postId}, ${saveToken})
@@ -477,8 +486,16 @@ export const communityRoutes: FastifyPluginAsync = async (app) => {
         UPDATE recovery_core.triad_posts
         SET saved_count = saved_count + 1
         WHERE id = ${postId}
-          AND EXISTS (SELECT 1 FROM inserted_save);
+          AND EXISTS (SELECT 1 FROM inserted_save)
+        RETURNING id as updated_id;
       `);
+
+      if (saveResult && saveResult.length > 0) {
+        await sendJob('record_community_notification', {
+          authorProfileId: post.profileId,
+          type: 'inspiration',
+        });
+      }
 
       // 3. Salva sempre em my_tools (coleção pessoal cega)
       await db
