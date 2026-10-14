@@ -2,8 +2,8 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { profiles, triadPosts } from '../db/schema/index.js';
-import { deriveAccountToken } from '../lib/crypto-token.js';
+import { profiles, triadPosts, myTools, habits } from '../db/schema/index.js';
+import { deriveAccountToken, deriveCommunityActionToken } from '../lib/crypto-token.js';
 import {
   FACO_CHIP_IDS,
   EVITO_CHIP_IDS,
@@ -339,4 +339,220 @@ export const communityRoutes: FastifyPluginAsync = async (app) => {
       message: 'Partilha excluída com sucesso.',
     });
   });
+
+  // POST /posts/:id/together - Apoio silencioso com token cego e anti-autoapoio
+  app.post(
+    '/posts/:id/together',
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      const { id: postId } = (request.params as { id: string }) ?? {};
+      const accountToken = deriveAccountToken(request.user.sub);
+      const [profile] = await db
+        .select()
+        .from(profiles)
+        .where(eq(profiles.accountToken, accountToken))
+        .limit(1);
+
+      if (!profile) {
+        return reply.status(404).send({
+          status: 'error',
+          message: 'Perfil não encontrado.',
+        });
+      }
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!postId || !uuidRegex.test(postId)) {
+        return reply.status(404).send({
+          status: 'error',
+          message: 'Partilha não encontrada.',
+        });
+      }
+
+      const [post] = await db
+        .select()
+        .from(triadPosts)
+        .where(eq(triadPosts.id, postId))
+        .limit(1);
+
+      if (!post) {
+        return reply.status(404).send({
+          status: 'error',
+          message: 'Partilha não encontrada.',
+        });
+      }
+
+      // 1. Bloqueio de auto-apoio
+      if (post.profileId === profile.id) {
+        return reply.status(400).send({
+          status: 'error',
+          message: 'Você não pode apoiar sua própria partilha.',
+        });
+      }
+
+      // 2. Token cego de apoio
+      const reactionToken = deriveCommunityActionToken('support', postId, profile.reactionSalt);
+
+      // 3. Incremento atômico condicional via CTE
+      await db.execute(sql`
+        WITH inserted_support AS (
+          INSERT INTO recovery_core.post_supports (post_id, reaction_token)
+          VALUES (${postId}, ${reactionToken})
+          ON CONFLICT (post_id, reaction_token) DO NOTHING
+          RETURNING post_id
+        )
+        UPDATE recovery_core.triad_posts
+        SET support_count = support_count + 1
+        WHERE id = ${postId}
+          AND EXISTS (SELECT 1 FROM inserted_support);
+      `);
+
+      return reply.status(200).send({
+        status: 'success',
+        message: 'Você deixou seu apoio silencioso.',
+      });
+    },
+  );
+
+  // POST /posts/:id/try - Adoção cega de prática para os 3 destinos funcionais
+  app.post(
+    '/posts/:id/try',
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      const { id: postId } = (request.params as { id: string }) ?? {};
+      const accountToken = deriveAccountToken(request.user.sub);
+      const [profile] = await db
+        .select()
+        .from(profiles)
+        .where(eq(profiles.accountToken, accountToken))
+        .limit(1);
+
+      if (!profile) {
+        return reply.status(404).send({
+          status: 'error',
+          message: 'Perfil não encontrado.',
+        });
+      }
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!postId || !uuidRegex.test(postId)) {
+        return reply.status(404).send({
+          status: 'error',
+          message: 'Partilha não encontrada.',
+        });
+      }
+
+      const [post] = await db
+        .select()
+        .from(triadPosts)
+        .where(eq(triadPosts.id, postId))
+        .limit(1);
+
+      if (!post) {
+        return reply.status(404).send({
+          status: 'error',
+          message: 'Partilha não encontrada.',
+        });
+      }
+
+      const primaryChipId = post.chipIds[0];
+      if (!primaryChipId) {
+        return reply.status(400).send({
+          status: 'error',
+          message: 'Partilha sem chip associado.',
+        });
+      }
+      const category = post.category as 'FACO' | 'EVITO' | 'ME_AJUDA';
+
+      // 1. Token cego de salvamento
+      const saveToken = deriveCommunityActionToken('save', postId, profile.reactionSalt);
+
+      // 2. Inserção em post_saves e incremento condicional de saved_count
+      await db.execute(sql`
+        WITH inserted_save AS (
+          INSERT INTO recovery_core.post_saves (post_id, save_token)
+          VALUES (${postId}, ${saveToken})
+          ON CONFLICT (post_id, save_token) DO NOTHING
+          RETURNING post_id
+        )
+        UPDATE recovery_core.triad_posts
+        SET saved_count = saved_count + 1
+        WHERE id = ${postId}
+          AND EXISTS (SELECT 1 FROM inserted_save);
+      `);
+
+      // 3. Salva sempre em my_tools (coleção pessoal cega)
+      await db
+        .insert(myTools)
+        .values({
+          profileId: profile.id,
+          chipId: primaryChipId,
+          category,
+        })
+        .onConflictDoNothing();
+
+      // 4. Roteamento para os 3 Destinos Funcionais
+      if (category === 'FACO') {
+        const habitsCountResult = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(habits)
+          .where(eq(habits.profileId, profile.id));
+
+        const currentHabitsCount = habitsCountResult[0]?.count ?? 0;
+
+        if (currentHabitsCount < 15) {
+          await db
+            .insert(habits)
+            .values({
+              profileId: profile.id,
+              chipId: primaryChipId,
+            })
+            .onConflictDoNothing();
+
+          return reply.status(200).send({
+            status: 'success',
+            data: {
+              saved: true,
+              addedToRoutine: true,
+              destination: 'routine',
+              message: 'Prática adicionada à sua rotina diária.',
+            },
+          });
+        }
+
+        return reply.status(200).send({
+          status: 'success',
+          data: {
+            saved: true,
+            addedToRoutine: false,
+            destination: 'my_tools',
+            message: 'Guardado nas suas ferramentas. Sua rotina diária já atingiu o teto de 15 hábitos.',
+          },
+        });
+      }
+
+      if (category === 'EVITO') {
+        return reply.status(200).send({
+          status: 'success',
+          data: {
+            saved: true,
+            addedToRoutine: false,
+            destination: 'protection_plan',
+            message: 'Limite adicionado ao seu Plano de Proteção.',
+          },
+        });
+      }
+
+      // ME_AJUDA
+      return reply.status(200).send({
+        status: 'success',
+        data: {
+          saved: true,
+          addedToRoutine: false,
+          destination: 'tools',
+          message: 'Ferramenta guardada para momentos difíceis.',
+        },
+      });
+    },
+  );
 };
+
